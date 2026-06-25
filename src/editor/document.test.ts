@@ -77,4 +77,36 @@ describe("document model", () => {
     expect(masked.layers[1].maskedBy).toBe(withTarget.layers[0].id);
     expect(released.layers[1].maskedBy).toBeUndefined();
   });
+
+  it("remasks a target by clearing the previous mask relationship", () => {
+    const withFirstMask = addLayer(createDocument(), { type: "rect", name: "First mask", x: 0, y: 0, width: 100, height: 100 });
+    const withSecondMask = addLayer(withFirstMask, { type: "rect", name: "Second mask", x: 20, y: 20, width: 80, height: 80 });
+    const withTarget = addLayer(withSecondMask, { type: "ellipse", name: "Target", x: 10, y: 10, width: 120, height: 120 });
+    const firstMasked = applyMask(withTarget, withTarget.layers[0].id, withTarget.layers[2].id);
+    const remasked = applyMask(firstMasked, withTarget.layers[1].id, withTarget.layers[2].id);
+
+    expect(remasked.layers[0].maskFor ?? []).not.toContain(withTarget.layers[2].id);
+    expect(remasked.layers[1].maskFor).toContain(withTarget.layers[2].id);
+    expect(remasked.layers[2].maskedBy).toBe(withTarget.layers[1].id);
+  });
+
+  it("deleting a mask layer releases its targets", () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Mask", x: 0, y: 0, width: 100, height: 100 });
+    const withTarget = addLayer(doc, { type: "ellipse", name: "Target", x: 20, y: 20, width: 120, height: 120 });
+    const masked = applyMask(withTarget, withTarget.layers[0].id, withTarget.layers[1].id);
+    const deleted = deleteLayer(masked, withTarget.layers[0].id);
+
+    expect(deleted.layers[0].name).toBe("Target");
+    expect(deleted.layers[0].maskedBy).toBeUndefined();
+  });
+
+  it("deleting a target clears it from the mask layer", () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Mask", x: 0, y: 0, width: 100, height: 100 });
+    const withTarget = addLayer(doc, { type: "ellipse", name: "Target", x: 20, y: 20, width: 120, height: 120 });
+    const masked = applyMask(withTarget, withTarget.layers[0].id, withTarget.layers[1].id);
+    const deleted = deleteLayer(masked, withTarget.layers[1].id);
+
+    expect(deleted.layers[0].name).toBe("Mask");
+    expect(deleted.layers[0].maskFor).toBeUndefined();
+  });
 });

@@ -224,11 +224,16 @@ export function applyMask(document: LogoDocument, maskLayerId: string, targetLay
     ...document,
     layers: document.layers.map((layer) => {
       if (layer.id === maskLayerId) {
-        return { ...layer, maskFor: Array.from(new Set([...(layer.maskFor ?? []), targetLayerId])) };
+        const maskFor = withoutMaskTarget(layer.maskFor, targetLayerId) ?? [];
+        return { ...layer, maskFor: Array.from(new Set([...maskFor, targetLayerId])) };
       }
 
       if (layer.id === targetLayerId) {
         return { ...layer, maskedBy: maskLayerId };
+      }
+
+      if (layer.maskFor?.includes(targetLayerId)) {
+        return { ...layer, maskFor: withoutMaskTarget(layer.maskFor, targetLayerId) };
       }
 
       return layer;

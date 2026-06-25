@@ -85,10 +85,12 @@ export interface LogoDocument {
 }
 
 export interface ExportOptions {
-  format: "svg" | "png" | "pdf";
+  format: "svg" | "jpg" | "pdf" | "webm";
+  width: number;
+  height: number;
+  background: string;
   scale: number;
-  includeHiddenLayers: boolean;
-  transparentBackground: boolean;
+  quality?: number;
 }
 
 export interface HistoryState {
