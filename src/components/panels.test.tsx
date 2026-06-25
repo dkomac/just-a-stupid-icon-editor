@@ -83,6 +83,24 @@ describe("editor panels", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it("commits precise number values once when pressing Enter", async () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
+    const onChange = vi.fn();
+    render(<Inspector document={doc} selectedLayerId={doc.layers[0].id} onChangeDocument={onChange} />);
+
+    const width = screen.getByLabelText("Width");
+    await userEvent.clear(width);
+    await userEvent.type(width, "160");
+    await userEvent.keyboard("{Enter}");
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layers: [expect.objectContaining({ width: 160 })],
+      }),
+    );
+  });
+
   it("does not commit invalid numbers", async () => {
     const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
     const onChange = vi.fn();

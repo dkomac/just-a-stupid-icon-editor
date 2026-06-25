@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Lock, Trash2, Unlock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   deleteLayer,
   duplicateLayer,
@@ -32,6 +32,7 @@ function LayerRenameField({
   onRename: (name: string) => void;
 }) {
   const [name, setName] = useState(layer.name);
+  const skipNextBlurCommit = useRef(false);
 
   useEffect(() => {
     setName(layer.name);
@@ -49,9 +50,17 @@ function LayerRenameField({
       aria-label={`Rename ${layer.name}`}
       value={name}
       onChange={(event) => setName(event.target.value)}
-      onBlur={() => commit()}
+      onBlur={() => {
+        if (skipNextBlurCommit.current) {
+          skipNextBlurCommit.current = false;
+          return;
+        }
+
+        commit();
+      }}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
+          skipNextBlurCommit.current = true;
           commit(event.currentTarget.value);
           event.currentTarget.blur();
         }

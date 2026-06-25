@@ -38,4 +38,19 @@ describe("App", () => {
 
     expect(screen.getByLabelText("Document name")).toHaveValue("Sample Logo");
   });
+
+  it("commits document name once when pressing Enter", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const name = screen.getByLabelText("Document name");
+    await user.clear(name);
+    await user.type(name, "Nova Mark");
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(screen.getByLabelText("Document name")).toHaveValue("Sample Logo");
+  });
 });

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface IconButtonProps {
   label: string;
@@ -99,6 +99,7 @@ export function TextField({
   onChange,
 }: TextFieldProps) {
   const [textValue, setTextValue] = useState(value);
+  const skipNextBlurCommit = useRef(false);
 
   useEffect(() => {
     setTextValue(value);
@@ -126,9 +127,17 @@ export function TextField({
             onChange(nextValue);
           }
         }}
-        onBlur={() => commit()}
+        onBlur={() => {
+          if (skipNextBlurCommit.current) {
+            skipNextBlurCommit.current = false;
+            return;
+          }
+
+          commit();
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
+            skipNextBlurCommit.current = true;
             commit(event.currentTarget.value);
             event.currentTarget.blur();
           }
@@ -177,6 +186,7 @@ export function NumberField({
   onChange,
 }: NumberFieldProps) {
   const [textValue, setTextValue] = useState(Number.isFinite(value) ? String(value) : "");
+  const skipNextBlurCommit = useRef(false);
 
   useEffect(() => {
     setTextValue(Number.isFinite(value) ? String(value) : "");
@@ -220,9 +230,17 @@ export function NumberField({
             onChange(parsed);
           }
         }}
-        onBlur={() => commit()}
+        onBlur={() => {
+          if (skipNextBlurCommit.current) {
+            skipNextBlurCommit.current = false;
+            return;
+          }
+
+          commit();
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
+            skipNextBlurCommit.current = true;
             commit(event.currentTarget.value);
             event.currentTarget.blur();
           }
@@ -256,6 +274,7 @@ export function normalizeHexColor(value: string): string | undefined {
 
 export function ColorField({ label, value, disabled = false, commitOn = "blur", onChange }: ColorFieldProps) {
   const [textValue, setTextValue] = useState(value);
+  const skipNextBlurCommit = useRef(false);
 
   useEffect(() => {
     setTextValue(value);
@@ -300,9 +319,17 @@ export function ColorField({ label, value, disabled = false, commitOn = "blur", 
               onChange(normalized);
             }
           }}
-          onBlur={() => commit()}
+          onBlur={() => {
+            if (skipNextBlurCommit.current) {
+              skipNextBlurCommit.current = false;
+              return;
+            }
+
+            commit();
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
+              skipNextBlurCommit.current = true;
               commit(event.currentTarget.value);
               event.currentTarget.blur();
             }
