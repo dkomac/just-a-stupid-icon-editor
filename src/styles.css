@@ -60,6 +60,7 @@ select:focus-visible {
   min-height: 0;
   display: grid;
   grid-template-columns: 64px minmax(360px, 1fr) 240px 280px;
+  grid-template-areas: "toolbar canvas layers inspector";
   gap: 1px;
   background: var(--line);
 }
@@ -71,6 +72,7 @@ select:focus-visible {
 }
 
 .toolbar {
+  grid-area: toolbar;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -78,6 +80,7 @@ select:focus-visible {
 }
 
 .canvas-wrap {
+  grid-area: canvas;
   display: grid;
   place-items: center;
   overflow: auto;
@@ -96,6 +99,14 @@ select:focus-visible {
   overflow: auto;
 }
 
+.side-panel[aria-label="Layers"] {
+  grid-area: layers;
+}
+
+.side-panel[aria-label="Inspector"] {
+  grid-area: inspector;
+}
+
 .side-panel h2 {
   margin: 0 0 12px;
   font-size: 13px;
@@ -104,7 +115,11 @@ select:focus-visible {
 @media (max-width: 980px) {
   .editor-grid {
     grid-template-columns: 56px minmax(280px, 1fr);
-    grid-template-rows: minmax(420px, 1fr) auto;
+    grid-template-rows: minmax(420px, 1fr) auto auto;
+    grid-template-areas:
+      "toolbar canvas"
+      "layers layers"
+      "inspector inspector";
   }
 
   .side-panel {

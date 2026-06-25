@@ -7,8 +7,8 @@ export default function App() {
       </header>
       <section className="editor-grid">
         <nav className="toolbar" aria-label="Shape tools">
-          <button type="button" aria-label="Rectangle">Rect</button>
-          <button type="button" aria-label="Ellipse">Oval</button>
+          <button type="button" aria-label="Rectangle">Rectangle</button>
+          <button type="button" aria-label="Ellipse">Ellipse</button>
           <button type="button" aria-label="Text">Text</button>
         </nav>
         <section className="canvas-wrap" aria-label="Logo canvas">
