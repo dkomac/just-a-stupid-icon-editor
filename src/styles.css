@@ -131,7 +131,7 @@ select:focus-visible {
   color: var(--ink);
 }
 
-.icon-button[aria-pressed="true"] {
+.icon-button[data-active="true"] {
   background: var(--accent-soft);
   border-color: oklch(0.75 0.08 245);
   color: var(--accent);
@@ -427,16 +427,6 @@ select:focus-visible {
   line-height: 1.45;
 }
 
-.dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: oklch(0.2 0.02 255 / 0.34);
-  z-index: 20;
-}
-
 .export-dialog {
   width: min(420px, 100%);
   max-height: min(680px, calc(100vh - 40px));
@@ -444,7 +434,12 @@ select:focus-visible {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
+  color: var(--ink);
   padding: 16px;
+}
+
+.export-dialog::backdrop {
+  background: oklch(0.2 0.02 255 / 0.34);
 }
 
 .dialog-actions {

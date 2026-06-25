@@ -5,16 +5,20 @@ interface IconButtonProps {
   label: string;
   icon: ReactNode;
   active?: boolean;
+  pressed?: boolean;
   disabled?: boolean;
   variant?: "default" | "primary" | "danger";
   onClick?: () => void;
 }
+
+type CommitMode = "blur" | "change";
 
 interface TextFieldProps {
   label: string;
   value: string;
   disabled?: boolean;
   placeholder?: string;
+  commitOn?: CommitMode;
   onChange: (value: string) => void;
 }
 
@@ -25,6 +29,7 @@ interface NumberFieldProps {
   min?: number;
   max?: number;
   step?: number;
+  commitOn?: CommitMode;
   onChange: (value: number) => void;
 }
 
@@ -32,6 +37,7 @@ interface ColorFieldProps {
   label: string;
   value: string;
   disabled?: boolean;
+  commitOn?: CommitMode;
   onChange: (value: string) => void;
 }
 
@@ -58,18 +64,23 @@ interface PanelSectionProps {
 export function IconButton({
   label,
   icon,
-  active = false,
+  active,
+  pressed,
   disabled = false,
   variant = "default",
   onClick,
 }: IconButtonProps) {
+  const isActive = active ?? pressed ?? false;
+  const pressedProps = pressed === undefined ? {} : { "aria-pressed": pressed };
+
   return (
     <button
       type="button"
       className="icon-button"
       aria-label={label}
-      aria-pressed={active}
+      {...pressedProps}
       data-variant={variant}
+      data-active={isActive}
       disabled={disabled}
       title={label}
       onClick={onClick}
@@ -79,16 +90,49 @@ export function IconButton({
   );
 }
 
-export function TextField({ label, value, disabled = false, placeholder, onChange }: TextFieldProps) {
+export function TextField({
+  label,
+  value,
+  disabled = false,
+  placeholder,
+  commitOn = "blur",
+  onChange,
+}: TextFieldProps) {
+  const [textValue, setTextValue] = useState(value);
+
+  useEffect(() => {
+    setTextValue(value);
+  }, [value]);
+
+  function commit(nextValue = textValue) {
+    if (nextValue !== value) {
+      onChange(nextValue);
+    }
+  }
+
   return (
     <label className="field">
       <span>{label}</span>
       <input
         type="text"
-        value={value}
+        value={textValue}
         disabled={disabled}
         placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          setTextValue(nextValue);
+
+          if (commitOn === "change") {
+            onChange(nextValue);
+          }
+        }}
+        onBlur={() => commit()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            commit(event.currentTarget.value);
+            event.currentTarget.blur();
+          }
+        }}
       />
     </label>
   );
@@ -109,6 +153,10 @@ function clamp(value: number, min?: number, max?: number): number {
 }
 
 function parseNumber(value: string, min?: number, max?: number): number | undefined {
+  if (value.trim() === "") {
+    return undefined;
+  }
+
   const next = Number(value);
 
   if (!Number.isFinite(next)) {
@@ -125,6 +173,7 @@ export function NumberField({
   min,
   max,
   step = 1,
+  commitOn = "blur",
   onChange,
 }: NumberFieldProps) {
   const [textValue, setTextValue] = useState(Number.isFinite(value) ? String(value) : "");
@@ -132,6 +181,21 @@ export function NumberField({
   useEffect(() => {
     setTextValue(Number.isFinite(value) ? String(value) : "");
   }, [value]);
+
+  function commit(rawValue = textValue) {
+    const parsed = parseNumber(rawValue, min, max);
+
+    if (parsed === undefined) {
+      setTextValue(Number.isFinite(value) ? String(value) : "");
+      return;
+    }
+
+    setTextValue(String(parsed));
+
+    if (parsed !== value) {
+      onChange(parsed);
+    }
+  }
 
   return (
     <label className="field">
@@ -145,12 +209,22 @@ export function NumberField({
         step={step}
         onChange={(event) => {
           const nextValue = event.target.value;
-          const parsed = parseNumber(nextValue, min, max);
 
           setTextValue(nextValue);
 
-          if (parsed !== undefined) {
+          if (commitOn === "change") {
+            const parsed = parseNumber(nextValue, min, max);
+            if (parsed === undefined) {
+              return;
+            }
             onChange(parsed);
+          }
+        }}
+        onBlur={() => commit()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            commit(event.currentTarget.value);
+            event.currentTarget.blur();
           }
         }}
       />
@@ -180,12 +254,27 @@ export function normalizeHexColor(value: string): string | undefined {
   return undefined;
 }
 
-export function ColorField({ label, value, disabled = false, onChange }: ColorFieldProps) {
+export function ColorField({ label, value, disabled = false, commitOn = "blur", onChange }: ColorFieldProps) {
   const [textValue, setTextValue] = useState(value);
 
   useEffect(() => {
     setTextValue(value);
   }, [value]);
+
+  function commit(rawValue = textValue) {
+    const normalized = normalizeHexColor(rawValue);
+
+    if (!normalized) {
+      setTextValue(value);
+      return;
+    }
+
+    setTextValue(normalized);
+
+    if (normalized !== value) {
+      onChange(normalized);
+    }
+  }
 
   return (
     <label className="field color-field">
@@ -200,12 +289,22 @@ export function ColorField({ label, value, disabled = false, onChange }: ColorFi
           spellCheck={false}
           onChange={(event) => {
             const nextValue = event.target.value;
-            const normalized = normalizeHexColor(nextValue);
 
             setTextValue(nextValue);
 
-            if (normalized) {
+            if (commitOn === "change") {
+              const normalized = normalizeHexColor(nextValue);
+              if (!normalized) {
+                return;
+              }
               onChange(normalized);
+            }
+          }}
+          onBlur={() => commit()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              commit(event.currentTarget.value);
+              event.currentTarget.blur();
             }
           }}
         />

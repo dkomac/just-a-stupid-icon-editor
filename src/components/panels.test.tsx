@@ -1,10 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { addLayer, createDocument } from "../editor/document";
+import type { LogoDocument } from "../editor/types";
+import { ExportDialog } from "./ExportDialog";
 import { Inspector } from "./Inspector";
 import { LayersPanel } from "./LayersPanel";
+import { TopBar } from "./TopBar";
 import { Toolbar } from "./Toolbar";
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("editor panels", () => {
   it("adds shape tools through the toolbar", async () => {
@@ -29,7 +37,39 @@ describe("editor panels", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
-  it("edits precise layer values in the inspector", async () => {
+  it("uses pressed state only for toggle buttons", () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
+
+    render(
+      <>
+        <TopBar
+          documentName="Logo"
+          canUndo
+          canRedo
+          zoom={1}
+          showGrid
+          snapToGrid
+          onRenameDocument={vi.fn()}
+          onUndo={vi.fn()}
+          onRedo={vi.fn()}
+          onToggleGrid={vi.fn()}
+          onToggleSnap={vi.fn()}
+          onOpenExport={vi.fn()}
+        />
+        <LayersPanel document={doc} selectedLayerIds={[doc.layers[0].id]} onSelectLayer={vi.fn()} onChangeDocument={vi.fn()} />
+      </>,
+    );
+
+    expect(screen.getByRole("button", { name: "Undo" })).not.toHaveAttribute("aria-pressed");
+    expect(screen.getByRole("button", { name: "Redo" })).not.toHaveAttribute("aria-pressed");
+    expect(screen.getByRole("button", { name: "Hide grid" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Disable snapping" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Hide Badge" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Duplicate Badge" })).not.toHaveAttribute("aria-pressed");
+    expect(screen.getByRole("button", { name: "Delete Badge" })).not.toHaveAttribute("aria-pressed");
+  });
+
+  it("edits precise layer values in the inspector on blur", async () => {
     const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
     const onChange = vi.fn();
     render(<Inspector document={doc} selectedLayerId={doc.layers[0].id} onChangeDocument={onChange} />);
@@ -37,7 +77,111 @@ describe("editor panels", () => {
     const width = screen.getByLabelText("Width");
     await userEvent.clear(width);
     await userEvent.type(width, "160");
+    expect(onChange).not.toHaveBeenCalled();
+    await userEvent.tab();
 
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it("does not commit invalid numbers", async () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
+    const onChange = vi.fn();
+    render(<Inspector document={doc} selectedLayerId={doc.layers[0].id} onChangeDocument={onChange} />);
+
+    const width = screen.getByLabelText("Width");
+    await userEvent.clear(width);
+    await userEvent.tab();
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(width).toHaveValue(100);
+  });
+
+  it("normalizes valid hex colors before committing", async () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
+    const onChange = vi.fn();
+    render(<Inspector document={doc} selectedLayerId={doc.layers[0].id} onChangeDocument={onChange} />);
+
+    const fill = screen.getByLabelText("Fill");
+    await userEvent.clear(fill);
+    await userEvent.type(fill, "#abc");
+    await userEvent.tab();
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layers: [expect.objectContaining({ fill: "#aabbcc" })],
+      }),
+    );
+  });
+
+  it("disables locked layer inspector inputs", () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
+    const lockedDoc: LogoDocument = {
+      ...doc,
+      layers: [{ ...doc.layers[0], locked: true }],
+    };
+
+    render(<Inspector document={lockedDoc} selectedLayerId={lockedDoc.layers[0].id} onChangeDocument={vi.fn()} />);
+
+    expect(screen.getByLabelText("Name")).toBeDisabled();
+    expect(screen.getByLabelText("Width")).toBeDisabled();
+    expect(screen.getByLabelText("Fill")).toBeDisabled();
+  });
+
+  it("closes the export dialog with Escape and restores focus", async () => {
+    const doc = createDocument();
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+
+    function ExportHarness() {
+      const [open, setOpen] = useState(false);
+
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Export launcher
+          </button>
+          <ExportDialog
+            open={open}
+            document={doc}
+            onClose={() => {
+              onClose();
+              setOpen(false);
+            }}
+            onDownload={vi.fn()}
+          />
+        </>
+      );
+    }
+
+    render(<ExportHarness />);
+
+    const launcher = screen.getByRole("button", { name: "Export launcher" });
+    await user.click(launcher);
+    expect(screen.getByRole("button", { name: "Close export dialog" })).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalled();
+    expect(launcher).toHaveFocus();
+  });
+
+  it("sends normalized export options to the download callback", async () => {
+    const doc = createDocument();
+    const onDownload = vi.fn();
+    render(<ExportDialog open document={doc} onClose={vi.fn()} onDownload={onDownload} />);
+
+    await userEvent.click(screen.getByLabelText("Transparent background"));
+    await userEvent.click(screen.getByRole("button", { name: "Download" }));
+
+    expect(onDownload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        format: "svg",
+        width: 512,
+        height: 512,
+        background: "transparent",
+        transparent: true,
+        scale: 1,
+      }),
+    );
   });
 });

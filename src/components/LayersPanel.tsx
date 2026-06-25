@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Lock, Trash2, Unlock } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   deleteLayer,
   duplicateLayer,
@@ -6,7 +7,7 @@ import {
   toggleLayerLocked,
   toggleLayerVisible,
 } from "../editor/document";
-import type { LogoDocument } from "../editor/types";
+import type { LogoDocument, LogoLayer } from "../editor/types";
 import { IconButton } from "./ui";
 
 interface LayersPanelProps {
@@ -21,6 +22,42 @@ function renameLayer(document: LogoDocument, layerId: string, name: string): Log
     ...document,
     layers: document.layers.map((layer) => (layer.id === layerId ? { ...layer, name } : layer)),
   };
+}
+
+function LayerRenameField({
+  layer,
+  onRename,
+}: {
+  layer: LogoLayer;
+  onRename: (name: string) => void;
+}) {
+  const [name, setName] = useState(layer.name);
+
+  useEffect(() => {
+    setName(layer.name);
+  }, [layer.name]);
+
+  function commit(nextName = name) {
+    if (nextName !== layer.name) {
+      onRename(nextName);
+    }
+  }
+
+  return (
+    <input
+      className="layer-rename"
+      aria-label={`Rename ${layer.name}`}
+      value={name}
+      onChange={(event) => setName(event.target.value)}
+      onBlur={() => commit()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          commit(event.currentTarget.value);
+          event.currentTarget.blur();
+        }
+      }}
+    />
+  );
 }
 
 export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChangeDocument }: LayersPanelProps) {
@@ -51,23 +88,21 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
                   <span className="layer-name">{layer.name}</span>
                   {maskStatus ? <span className="mask-badge">{maskStatus}</span> : null}
                 </button>
-                <input
-                  className="layer-rename"
-                  aria-label={`Rename ${layer.name}`}
-                  value={layer.name}
-                  onChange={(event) => onChangeDocument(renameLayer(document, layer.id, event.target.value))}
+                <LayerRenameField
+                  layer={layer}
+                  onRename={(name) => onChangeDocument(renameLayer(document, layer.id, name))}
                 />
                 <div className="layer-actions">
                   <IconButton
                     label={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
                     icon={layer.visible ? <Eye size={15} /> : <EyeOff size={15} />}
-                    active={layer.visible}
+                    pressed={layer.visible}
                     onClick={() => onChangeDocument(toggleLayerVisible(document, layer.id))}
                   />
                   <IconButton
                     label={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
                     icon={layer.locked ? <Lock size={15} /> : <Unlock size={15} />}
-                    active={layer.locked}
+                    pressed={layer.locked}
                     onClick={() => onChangeDocument(toggleLayerLocked(document, layer.id))}
                   />
                   <IconButton

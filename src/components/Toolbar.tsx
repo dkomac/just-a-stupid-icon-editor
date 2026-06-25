@@ -30,7 +30,7 @@ export function Toolbar({ activeTool, onSelectTool, onAddLayer }: ToolbarProps) 
             key={tool.tool}
             label={tool.label}
             icon={tool.tool === "star" ? <Sparkles size={18} strokeWidth={2} /> : tool.icon}
-            active={activeTool === tool.tool}
+            pressed={activeTool === tool.tool}
             onClick={() => {
               onSelectTool(tool.tool);
 

@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ExportOptions, LogoDocument } from "../editor/types";
 import { CheckboxField, ColorField, IconButton, NumberField, SelectField } from "./ui";
 
@@ -26,6 +26,8 @@ function supportsTransparency(format: ExportOptions["format"]): boolean {
 }
 
 export function ExportDialog({ open, document, onClose, onDownload }: ExportDialogProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const [format, setFormat] = useState<ExportOptions["format"]>("svg");
   const [width, setWidth] = useState(document.settings.width);
   const [height, setHeight] = useState(document.settings.height);
@@ -47,6 +49,20 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
     [background, format, height, quality, scale, transparent, transparentAvailable, width],
   );
 
+  function closeDialog() {
+    const dialog = dialogRef.current;
+
+    if (dialog?.open && typeof dialog.close === "function") {
+      dialog.close();
+    } else {
+      dialog?.removeAttribute("open");
+    }
+
+    onClose();
+    restoreFocusRef.current?.focus();
+    restoreFocusRef.current = null;
+  }
+
   useEffect(() => {
     if (open) {
       setWidth(document.settings.width);
@@ -55,52 +71,99 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
     }
   }, [document.settings.background, document.settings.height, document.settings.width, open]);
 
-  if (!open) {
-    return null;
-  }
+  useEffect(() => {
+    const dialog = dialogRef.current;
+
+    if (!dialog) {
+      return;
+    }
+
+    if (!open) {
+      if (dialog.open && typeof dialog.close === "function") {
+        dialog.close();
+      } else {
+        dialog.removeAttribute("open");
+      }
+
+      restoreFocusRef.current?.focus();
+      restoreFocusRef.current = null;
+      return;
+    }
+
+    restoreFocusRef.current = globalThis.document.activeElement as HTMLElement | null;
+
+    if (typeof dialog.showModal === "function") {
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+    } else {
+      dialog.setAttribute("open", "");
+    }
+
+    dialog.querySelector<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])")?.focus();
+  }, [open]);
 
   return (
-    <div className="dialog-backdrop" role="presentation">
-      <section className="export-dialog" role="dialog" aria-modal="true" aria-labelledby="export-title">
-        <div className="dialog-heading">
-          <h2 id="export-title">Export</h2>
-          <IconButton label="Close export dialog" icon={<X size={17} />} onClick={onClose} />
+    <dialog
+      ref={dialogRef}
+      className="export-dialog"
+      aria-labelledby="export-title"
+      onCancel={(event) => {
+        event.preventDefault();
+        closeDialog();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeDialog();
+        }
+      }}
+    >
+      <div className="dialog-heading">
+        <h2 id="export-title">Export</h2>
+        <IconButton label="Close export dialog" icon={<X size={17} />} onClick={closeDialog} />
+      </div>
+      <div className="field-stack">
+        <SelectField label="Format" value={format} options={formats} onChange={setFormat} />
+        <div className="field-grid">
+          <NumberField label="Width" value={width} min={1} commitOn="change" onChange={setWidth} />
+          <NumberField label="Height" value={height} min={1} commitOn="change" onChange={setHeight} />
         </div>
-        <div className="field-stack">
-          <SelectField label="Format" value={format} options={formats} onChange={setFormat} />
-          <div className="field-grid">
-            <NumberField label="Width" value={width} min={1} onChange={setWidth} />
-            <NumberField label="Height" value={height} min={1} onChange={setHeight} />
-          </div>
-          <ColorField label="Background" value={background} disabled={transparent && transparentAvailable} onChange={setBackground} />
-          <CheckboxField
-            label="Transparent background"
-            checked={transparent && transparentAvailable}
-            disabled={!transparentAvailable}
-            onChange={setTransparent}
+        <ColorField
+          label="Background"
+          value={background}
+          disabled={transparent && transparentAvailable}
+          commitOn="change"
+          onChange={setBackground}
+        />
+        <CheckboxField
+          label="Transparent background"
+          checked={transparent && transparentAvailable}
+          disabled={!transparentAvailable}
+          onChange={setTransparent}
+        />
+        <div className="field-grid">
+          <NumberField label="Scale" value={scale} min={1} step={0.5} commitOn="change" onChange={setScale} />
+          <NumberField
+            label="Quality"
+            value={quality}
+            min={0.1}
+            max={1}
+            step={0.01}
+            disabled={format !== "jpg" && format !== "webm"}
+            commitOn="change"
+            onChange={setQuality}
           />
-          <div className="field-grid">
-            <NumberField label="Scale" value={scale} min={1} step={0.5} onChange={setScale} />
-            <NumberField
-              label="Quality"
-              value={quality}
-              min={0.1}
-              max={1}
-              step={0.01}
-              disabled={format !== "jpg" && format !== "webm"}
-              onChange={setQuality}
-            />
-          </div>
         </div>
-        <div className="dialog-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="button" className="primary-button" onClick={() => onDownload(normalizedOptions)}>
-            Download
-          </button>
-        </div>
-      </section>
-    </div>
+      </div>
+      <div className="dialog-actions">
+        <button type="button" className="secondary-button" onClick={closeDialog}>
+          Cancel
+        </button>
+        <button type="button" className="primary-button" onClick={() => onDownload(normalizedOptions)}>
+          Download
+        </button>
+      </div>
+    </dialog>
   );
 }

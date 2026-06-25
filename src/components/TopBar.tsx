@@ -45,13 +45,13 @@ export function TopBar({
         <IconButton
           label={showGrid ? "Hide grid" : "Show grid"}
           icon={<Grid2X2 size={17} strokeWidth={2} />}
-          active={showGrid}
+          pressed={showGrid}
           onClick={onToggleGrid}
         />
         <IconButton
           label={snapToGrid ? "Disable snapping" : "Enable snapping"}
           icon={<Magnet size={17} strokeWidth={2} />}
-          active={snapToGrid}
+          pressed={snapToGrid}
           onClick={onToggleSnap}
         />
         <button type="button" className="primary-button" onClick={onOpenExport}>
