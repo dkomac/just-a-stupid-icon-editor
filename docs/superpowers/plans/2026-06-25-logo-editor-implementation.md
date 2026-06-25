@@ -810,7 +810,7 @@ Create `src/editor/exporters.ts` with:
 export function normalizeExportOptions(input: Partial<ExportOptions> & { format: ExportFormat }): ExportOptions;
 export function createSvgBlob(document: LogoDocument, options?: Partial<ExportOptions>): Blob;
 export async function createJpgBlob(document: LogoDocument, options: ExportOptions): Promise<Blob>;
-export function createPdfBlob(document: LogoDocument, options: ExportOptions): Blob;
+export async function createPdfBlob(document: LogoDocument, options: ExportOptions): Promise<Blob>;
 export function getWebmSupport(): { supported: boolean; mimeType: string; reason?: string };
 export async function createWebmBlob(document: LogoDocument, options: ExportOptions): Promise<Blob>;
 export function downloadBlob(blob: Blob, filename: string): void;
@@ -820,7 +820,7 @@ Implementation requirements:
 
 - SVG export returns `image/svg+xml`.
 - JPG export serializes SVG, draws it into a canvas at requested dimensions, fills a solid background, and returns `image/jpeg`.
-- PDF export uses jsPDF with requested dimensions and embeds the rendered SVG as an image or draws the rasterized output.
+- PDF export uses jsPDF with requested dimensions and embeds the rendered SVG by rasterizing it to an image/canvas first.
 - WebM export creates a canvas, renders 60 frames over 2 seconds at 30 FPS, captures the stream, records with MediaRecorder, and returns `video/webm`.
 - If WebM is unsupported, `getWebmSupport` returns `supported: false` and `createWebmBlob` rejects with a readable error.
 
@@ -1103,7 +1103,7 @@ async function handleDownload(options: ExportOptions) {
       : options.format === "jpg"
         ? await createJpgBlob(document, options)
         : options.format === "pdf"
-          ? createPdfBlob(document, options)
+          ? await createPdfBlob(document, options)
           : await createWebmBlob(document, options);
 
   downloadBlob(blob, `${document.name}.${options.format}`);
