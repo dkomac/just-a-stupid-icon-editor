@@ -1,3 +1,8 @@
+import { sampleDocument } from "./editor/sample";
+import { renderDocumentSvg } from "./editor/svg";
+
+const sampleSvg = renderDocumentSvg(sampleDocument);
+
 export default function App() {
   return (
     <main className="app-shell">
@@ -12,9 +17,7 @@ export default function App() {
           <button type="button" aria-label="Text">Text</button>
         </nav>
         <section className="canvas-wrap" aria-label="Logo canvas">
-          <svg role="img" aria-label="Current logo" viewBox="0 0 640 480">
-            <rect width="640" height="480" fill="white" />
-          </svg>
+          <div dangerouslySetInnerHTML={{ __html: sampleSvg }} />
         </section>
         <aside className="side-panel" aria-label="Layers" role="region">
           <h2>Layers</h2>
