@@ -40,6 +40,11 @@ function snapGeometryValue(value: number, gridSize: number, enabled: boolean): n
   return enabled ? snapValue(value, gridSize) : value;
 }
 
+function snapSizeValue(value: number, gridSize: number, enabled: boolean): number {
+  const minimumSize = Math.max(MIN_LAYER_SIZE, value);
+  return Math.max(MIN_LAYER_SIZE, snapGeometryValue(minimumSize, gridSize, enabled));
+}
+
 function selectedEditableLayers(document: LogoDocument, layerIds: string[]): LogoLayer[] {
   return document.layers.filter((layer) => layerIds.includes(layer.id) && !layer.locked);
 }
@@ -149,12 +154,15 @@ export function CanvasStage({
   const pointerUpHandlerRef = useRef<(event: PointerEvent) => void>(() => {});
   const stablePointerMoveHandler = useRef((event: PointerEvent) => pointerMoveHandlerRef.current(event));
   const stablePointerUpHandler = useRef((event: PointerEvent) => pointerUpHandlerRef.current(event));
+  const previewDocumentRef = useRef<LogoDocument | undefined>(undefined);
+  const [previewDocument, setPreviewDocument] = useState<LogoDocument>();
   const [guides, setGuides] = useState<CenterGuides>({});
-  const selectedLayer = document.layers.find((layer) => selectedLayerIds.includes(layer.id) && layer.visible);
-  const gridId = `canvas-grid-${document.id}`;
-  const maskLayerIds = new Set(document.layers.filter((layer) => (layer.maskFor?.length ?? 0) > 0).map((layer) => layer.id));
-  const visibleMaskLayers = document.layers.filter((layer) => layer.visible && maskLayerIds.has(layer.id));
-  const clipPathIdsByLayerId = new Map(visibleMaskLayers.map((layer) => [layer.id, clipPathId(document.id, layer.id)]));
+  const activeDocument = previewDocument ?? document;
+  const selectedLayer = activeDocument.layers.find((layer) => selectedLayerIds.includes(layer.id) && layer.visible);
+  const gridId = `canvas-grid-${activeDocument.id}`;
+  const maskLayerIds = new Set(activeDocument.layers.filter((layer) => (layer.maskFor?.length ?? 0) > 0).map((layer) => layer.id));
+  const visibleMaskLayers = activeDocument.layers.filter((layer) => layer.visible && maskLayerIds.has(layer.id));
+  const clipPathIdsByLayerId = new Map(visibleMaskLayers.map((layer) => [layer.id, clipPathId(activeDocument.id, layer.id)]));
 
   useEffect(() => {
     return () => {
@@ -163,11 +171,18 @@ export function CanvasStage({
     };
   }, []);
 
-  function commitInteraction(nextDocument: LogoDocument, activeLayerIds: string[]) {
-    onChangeDocument({
+  function withActiveSelection(nextDocument: LogoDocument, activeLayerIds: string[]) {
+    return {
       ...nextDocument,
       selectedLayerIds: activeLayerIds,
-    });
+    };
+  }
+
+  function previewInteraction(nextDocument: LogoDocument, activeLayerIds: string[]) {
+    const nextPreviewDocument = withActiveSelection(nextDocument, activeLayerIds);
+
+    previewDocumentRef.current = nextPreviewDocument;
+    setPreviewDocument(nextPreviewDocument);
   }
 
   function updateMove(state: InteractionState, point: Point) {
@@ -184,8 +199,8 @@ export function CanvasStage({
 
     const movedById = new Map(
       editableLayers.map((layer) => {
-        let x = layer.x + deltaX;
-        let y = layer.y + deltaY;
+        let x = snapGeometryValue(layer.x + deltaX, gridSize, snapToGrid);
+        let y = snapGeometryValue(layer.y + deltaY, gridSize, snapToGrid);
         const centerX = x + layer.width / 2;
         const centerY = y + layer.height / 2;
         const verticalTarget = targets.find((target) => Math.abs(centerX - target.x) <= GUIDE_THRESHOLD);
@@ -205,15 +220,15 @@ export function CanvasStage({
           layer.id,
           {
             ...layer,
-            x: snapGeometryValue(x, gridSize, snapToGrid),
-            y: snapGeometryValue(y, gridSize, snapToGrid),
+            x,
+            y,
           } as LogoLayer,
         ];
       }),
     );
 
     setGuides(nextGuides);
-    commitInteraction(
+    previewInteraction(
       {
         ...state.startDocument,
         layers: state.startDocument.layers.map((layer) => movedById.get(layer.id) ?? layer),
@@ -258,11 +273,11 @@ export function CanvasStage({
     const nextPatch = {
       x: snapGeometryValue(x, gridSize, snapToGrid),
       y: snapGeometryValue(y, gridSize, snapToGrid),
-      width: snapGeometryValue(width, gridSize, snapToGrid),
-      height: snapGeometryValue(height, gridSize, snapToGrid),
+      width: snapSizeValue(width, gridSize, snapToGrid),
+      height: snapSizeValue(height, gridSize, snapToGrid),
     };
 
-    commitInteraction(
+    previewInteraction(
       {
         ...state.startDocument,
         layers: state.startDocument.layers.map((candidate) =>
@@ -284,7 +299,7 @@ export function CanvasStage({
     const angle = (Math.atan2(point.y - center.y, point.x - center.x) * 180) / Math.PI + 90;
     const rotation = Math.round((angle + 360) % 360);
 
-    commitInteraction(
+    previewInteraction(
       {
         ...state.startDocument,
         layers: state.startDocument.layers.map((candidate) =>
@@ -325,6 +340,11 @@ export function CanvasStage({
     }
 
     interactionRef.current = null;
+    if (previewDocumentRef.current) {
+      onChangeDocument(previewDocumentRef.current);
+    }
+    previewDocumentRef.current = undefined;
+    setPreviewDocument(undefined);
     setGuides({});
     window.removeEventListener("pointermove", stablePointerMoveHandler.current);
     window.removeEventListener("pointerup", stablePointerUpHandler.current);
@@ -353,7 +373,7 @@ export function CanvasStage({
       kind: "move",
       pointerId: event.pointerId,
       startPoint: canvasPoint(svgRef.current, event),
-      startDocument: document,
+      startDocument: activeDocument,
       layerIds,
     });
   }
@@ -367,7 +387,7 @@ export function CanvasStage({
       kind: "resize",
       pointerId: event.pointerId,
       startPoint: canvasPoint(svgRef.current, event),
-      startDocument: document,
+      startDocument: activeDocument,
       layerIds: [selectedLayer.id],
       handle,
     });
@@ -382,7 +402,7 @@ export function CanvasStage({
       kind: "rotate",
       pointerId: event.pointerId,
       startPoint: canvasPoint(svgRef.current, event),
-      startDocument: document,
+      startDocument: activeDocument,
       layerIds: [selectedLayer.id],
     });
   }
@@ -392,16 +412,16 @@ export function CanvasStage({
       <svg
         ref={svgRef}
         className="canvas-svg"
-        width={document.settings.width}
-        height={document.settings.height}
-        viewBox={`0 0 ${document.settings.width} ${document.settings.height}`}
+        width={activeDocument.settings.width}
+        height={activeDocument.settings.height}
+        viewBox={`0 0 ${activeDocument.settings.width} ${activeDocument.settings.height}`}
         role="img"
-        aria-label={document.name}
+        aria-label={activeDocument.name}
       >
         <defs>
           {showGrid ? (
-            <pattern id={gridId} width={document.settings.gridSize} height={document.settings.gridSize} patternUnits="userSpaceOnUse">
-              <path d={`M ${document.settings.gridSize} 0 L 0 0 0 ${document.settings.gridSize}`} className="canvas-grid-line" />
+            <pattern id={gridId} width={activeDocument.settings.gridSize} height={activeDocument.settings.gridSize} patternUnits="userSpaceOnUse">
+              <path d={`M ${activeDocument.settings.gridSize} 0 L 0 0 0 ${activeDocument.settings.gridSize}`} className="canvas-grid-line" />
             </pattern>
           ) : null}
           {visibleMaskLayers.map((layer) => (
@@ -410,10 +430,10 @@ export function CanvasStage({
             </clipPath>
           ))}
         </defs>
-        <rect width="100%" height="100%" fill={document.settings.background} />
+        <rect width="100%" height="100%" fill={activeDocument.settings.background} />
         {showGrid ? <rect width="100%" height="100%" fill={`url(#${gridId})`} className="canvas-grid-fill" /> : null}
-        {document.layers
-          .filter((layer) => layer.visible)
+        {activeDocument.layers
+          .filter((layer) => layer.visible && !maskLayerIds.has(layer.id))
           .map((layer) => {
             const clipId = layer.maskedBy ? clipPathIdsByLayerId.get(layer.maskedBy) : undefined;
 
@@ -434,8 +454,8 @@ export function CanvasStage({
               </g>
             );
           })}
-        {guides.vertical !== undefined ? <line className="canvas-guide" x1={guides.vertical} x2={guides.vertical} y1={0} y2={document.settings.height} /> : null}
-        {guides.horizontal !== undefined ? <line className="canvas-guide" x1={0} x2={document.settings.width} y1={guides.horizontal} y2={guides.horizontal} /> : null}
+        {guides.vertical !== undefined ? <line className="canvas-guide" x1={guides.vertical} x2={guides.vertical} y1={0} y2={activeDocument.settings.height} /> : null}
+        {guides.horizontal !== undefined ? <line className="canvas-guide" x1={0} x2={activeDocument.settings.width} y1={guides.horizontal} y2={guides.horizontal} /> : null}
         {selectedLayer ? (
           <g className="canvas-selection" transform={layerTransform(selectedLayer)}>
             <rect
