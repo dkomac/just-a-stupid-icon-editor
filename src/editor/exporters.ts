@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { renderDocumentSvg } from "./svg";
-import type { ExportOptions, LogoDocument, LogoLayer } from "./types";
+import type { ExportOptions, LogoDocument } from "./types";
 
 export type ExportFormat = ExportOptions["format"];
 
@@ -36,19 +36,15 @@ export function createSvgBlob(document: LogoDocument, options: Partial<ExportOpt
 
 export async function createJpgBlob(document: LogoDocument, options: ExportOptions): Promise<Blob> {
   const exportOptions = normalizeExportOptions(options);
-  const canvas = createExportCanvas(exportOptions);
-  const context = get2dContext(canvas);
-  const image = await loadSvgImage(renderExportSvg(document, exportOptions));
-
-  fillCanvasBackground(context, exportOptions);
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const canvas = await renderSvgToCanvas(renderExportSvg(document, exportOptions), exportOptions);
 
   return canvasToBlob(canvas, "image/jpeg", exportOptions.quality ?? DEFAULT_JPG_QUALITY);
 }
 
-export function createPdfBlob(document: LogoDocument, options: ExportOptions): Blob {
+export async function createPdfBlob(document: LogoDocument, options: ExportOptions): Promise<Blob> {
   const exportOptions = normalizeExportOptions(options);
   const svg = renderExportSvg(document, exportOptions);
+  const canvas = await renderSvgToCanvas(svg, exportOptions);
   const pdf = new jsPDF({
     orientation: exportOptions.width >= exportOptions.height ? "landscape" : "portrait",
     unit: "px",
@@ -62,9 +58,14 @@ export function createPdfBlob(document: LogoDocument, options: ExportOptions): B
     creator: "Logo Creator",
   });
   pdf.addMetadata(svg);
-  pdf.setFillColor(exportOptions.background);
-  pdf.rect(0, 0, exportOptions.width, exportOptions.height, "F");
-  drawPdfLayers(pdf, document);
+  pdf.addImage(
+    canvas.toDataURL("image/jpeg", exportOptions.quality ?? DEFAULT_JPG_QUALITY),
+    "JPEG",
+    0,
+    0,
+    exportOptions.width,
+    exportOptions.height,
+  );
 
   return pdf.output("blob");
 }
@@ -169,190 +170,15 @@ function createExportCanvas(options: ExportOptions): HTMLCanvasElement {
   return canvas;
 }
 
-function drawPdfLayers(pdf: jsPDF, document: LogoDocument): void {
-  const maskLayerIds = new Set(
-    document.layers
-      .filter((layer) => (layer.maskFor?.length ?? 0) > 0)
-      .map((layer) => layer.id),
-  );
+async function renderSvgToCanvas(svg: string, options: ExportOptions): Promise<HTMLCanvasElement> {
+  const canvas = createExportCanvas(options);
+  const context = get2dContext(canvas);
+  const image = await loadSvgImage(svg);
 
-  document.layers
-    .filter((layer) => layer.visible && !maskLayerIds.has(layer.id))
-    .forEach((layer) => drawPdfLayer(pdf, layer));
-}
+  fillCanvasBackground(context, options);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-function drawPdfLayer(pdf: jsPDF, layer: LogoLayer): void {
-  const fill = pdfPaint(layer.fill, "#111111");
-  const stroke = pdfPaint(layer.stroke, fill);
-  const hasStroke = layer.strokeWidth > 0 && Boolean(layer.stroke);
-  const style = hasStroke ? "FD" : "F";
-
-  pdf.setFillColor(fill);
-  pdf.setDrawColor(stroke);
-  pdf.setLineWidth(Math.max(0, layer.strokeWidth));
-
-  if (layer.type === "rect") {
-    const radius = Math.max(0, Math.min(layer.cornerRadius, layer.width / 2, layer.height / 2));
-
-    if (radius > 0) {
-      pdf.roundedRect(layer.x, layer.y, layer.width, layer.height, radius, radius, style);
-      return;
-    }
-
-    pdf.rect(layer.x, layer.y, layer.width, layer.height, style);
-    return;
-  }
-
-  if (layer.type === "ellipse") {
-    pdf.ellipse(layer.x + layer.width / 2, layer.y + layer.height / 2, layer.width / 2, layer.height / 2, style);
-    return;
-  }
-
-  if (layer.type === "text") {
-    pdf.setTextColor(fill);
-    pdf.setFont("helvetica", layer.fontWeight >= 700 ? "bold" : "normal", layer.fontWeight);
-    pdf.setFontSize(layer.fontSize);
-    pdf.text(layer.text, layer.x, layer.y + layer.height / 2, { baseline: "middle" });
-    return;
-  }
-
-  if (layer.type === "path") {
-    drawPdfPath(pdf, layer.path, hasStroke);
-  }
-}
-
-function drawPdfPath(pdf: jsPDF, path: string, hasStroke: boolean): void {
-  const tokens = path.match(/[a-zA-Z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi) ?? [];
-  let index = 0;
-  let command = "";
-  let currentX = 0;
-  let currentY = 0;
-  let startX = 0;
-  let startY = 0;
-  let hasPath = false;
-
-  const hasNumber = () => index < tokens.length && !/^[a-zA-Z]$/.test(tokens[index]);
-  const readNumber = () => Number(tokens[index++]);
-  const readPoint = (relative: boolean) => {
-    const x = readNumber();
-    const y = readNumber();
-
-    return {
-      x: relative ? currentX + x : x,
-      y: relative ? currentY + y : y,
-    };
-  };
-
-  while (index < tokens.length) {
-    if (/^[a-zA-Z]$/.test(tokens[index])) {
-      command = tokens[index++];
-    }
-
-    const relative = command === command.toLowerCase();
-
-    if (command.toLowerCase() === "m") {
-      const point = readPoint(relative);
-      pdf.moveTo(point.x, point.y);
-      currentX = point.x;
-      currentY = point.y;
-      startX = point.x;
-      startY = point.y;
-      hasPath = true;
-      command = relative ? "l" : "L";
-
-      while (hasNumber()) {
-        const linePoint = readPoint(relative);
-        pdf.lineTo(linePoint.x, linePoint.y);
-        currentX = linePoint.x;
-        currentY = linePoint.y;
-      }
-
-      continue;
-    }
-
-    if (command.toLowerCase() === "l") {
-      while (hasNumber()) {
-        const point = readPoint(relative);
-        pdf.lineTo(point.x, point.y);
-        currentX = point.x;
-        currentY = point.y;
-      }
-
-      continue;
-    }
-
-    if (command.toLowerCase() === "h") {
-      while (hasNumber()) {
-        const x = readNumber();
-        currentX = relative ? currentX + x : x;
-        pdf.lineTo(currentX, currentY);
-      }
-
-      continue;
-    }
-
-    if (command.toLowerCase() === "v") {
-      while (hasNumber()) {
-        const y = readNumber();
-        currentY = relative ? currentY + y : y;
-        pdf.lineTo(currentX, currentY);
-      }
-
-      continue;
-    }
-
-    if (command.toLowerCase() === "c") {
-      while (hasNumber()) {
-        const controlA = readPoint(relative);
-        const controlB = readPoint(relative);
-        const point = readPoint(relative);
-        pdf.curveTo(controlA.x, controlA.y, controlB.x, controlB.y, point.x, point.y);
-        currentX = point.x;
-        currentY = point.y;
-      }
-
-      continue;
-    }
-
-    if (command.toLowerCase() === "q") {
-      while (hasNumber()) {
-        const control = readPoint(relative);
-        const point = readPoint(relative);
-        const controlA = {
-          x: currentX + (2 / 3) * (control.x - currentX),
-          y: currentY + (2 / 3) * (control.y - currentY),
-        };
-        const controlB = {
-          x: point.x + (2 / 3) * (control.x - point.x),
-          y: point.y + (2 / 3) * (control.y - point.y),
-        };
-
-        pdf.curveTo(controlA.x, controlA.y, controlB.x, controlB.y, point.x, point.y);
-        currentX = point.x;
-        currentY = point.y;
-      }
-
-      continue;
-    }
-
-    if (command.toLowerCase() === "z") {
-      pdf.close();
-      currentX = startX;
-      currentY = startY;
-      continue;
-    }
-
-    break;
-  }
-
-  if (hasPath) {
-    if (hasStroke) {
-      pdf.fillStroke();
-      return;
-    }
-
-    pdf.fill();
-  }
+  return canvas;
 }
 
 function get2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
@@ -392,10 +218,6 @@ function loadSvgImage(svg: string): Promise<HTMLImageElement> {
 }
 
 function svgObjectUrl(svg: string): string {
-  if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
-    return URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
-  }
-
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
@@ -479,16 +301,6 @@ function normalizeBackground(value: string | undefined): string {
   }
 
   return background;
-}
-
-function pdfPaint(value: string | undefined, fallback: string): string {
-  const paint = value?.trim();
-
-  if (paint && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(paint)) {
-    return paint;
-  }
-
-  return fallback;
 }
 
 function clampQuality(value: number | undefined): number {
