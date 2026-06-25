@@ -20,8 +20,8 @@ interface Point {
 }
 
 interface CenterGuides {
-  horizontal: boolean;
-  vertical: boolean;
+  horizontal?: number;
+  vertical?: number;
 }
 
 interface InteractionState {
@@ -45,19 +45,22 @@ function selectedEditableLayers(document: LogoDocument, layerIds: string[]): Log
 }
 
 function canvasPoint(svg: SVGSVGElement | null, event: PointerEvent | React.PointerEvent): Point {
+  const clientX = Number.isFinite(event.clientX) ? event.clientX : 0;
+  const clientY = Number.isFinite(event.clientY) ? event.clientY : 0;
+
   if (!svg) {
-    return { x: event.clientX, y: event.clientY };
+    return { x: clientX, y: clientY };
   }
 
   const rect = svg.getBoundingClientRect();
 
-  if (rect.width === 0 || rect.height === 0) {
-    return { x: event.clientX, y: event.clientY };
+  if (!Number.isFinite(rect.width) || !Number.isFinite(rect.height) || rect.width <= 0 || rect.height <= 0) {
+    return { x: clientX, y: clientY };
   }
 
   return {
-    x: ((event.clientX - rect.left) / rect.width) * Number(svg.getAttribute("width")),
-    y: ((event.clientY - rect.top) / rect.height) * Number(svg.getAttribute("height")),
+    x: ((clientX - rect.left) / rect.width) * Number(svg.getAttribute("width")),
+    y: ((clientY - rect.top) / rect.height) * Number(svg.getAttribute("height")),
   };
 }
 
@@ -122,6 +125,16 @@ function clipPathId(documentId: string, layerId: string): string {
   return `canvas-clip-${documentId}-${layerId}`.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
+function guideTargets(document: LogoDocument, movingLayerIds: string[]): Point[] {
+  return [
+    {
+      x: document.settings.width / 2,
+      y: document.settings.height / 2,
+    },
+    ...document.layers.filter((layer) => layer.visible && !movingLayerIds.includes(layer.id)).map(centerOf),
+  ];
+}
+
 export function CanvasStage({
   document,
   selectedLayerIds,
@@ -136,7 +149,7 @@ export function CanvasStage({
   const pointerUpHandlerRef = useRef<(event: PointerEvent) => void>(() => {});
   const stablePointerMoveHandler = useRef((event: PointerEvent) => pointerMoveHandlerRef.current(event));
   const stablePointerUpHandler = useRef((event: PointerEvent) => pointerUpHandlerRef.current(event));
-  const [guides, setGuides] = useState<CenterGuides>({ horizontal: false, vertical: false });
+  const [guides, setGuides] = useState<CenterGuides>({});
   const selectedLayer = document.layers.find((layer) => selectedLayerIds.includes(layer.id) && layer.visible);
   const gridId = `canvas-grid-${document.id}`;
   const maskLayerIds = new Set(document.layers.filter((layer) => (layer.maskFor?.length ?? 0) > 0).map((layer) => layer.id));
@@ -161,8 +174,9 @@ export function CanvasStage({
     const deltaX = point.x - state.startPoint.x;
     const deltaY = point.y - state.startPoint.y;
     const editableLayers = selectedEditableLayers(state.startDocument, state.layerIds);
-    const nextGuides: CenterGuides = { horizontal: false, vertical: false };
+    const nextGuides: CenterGuides = {};
     const gridSize = state.startDocument.settings.gridSize;
+    const targets = guideTargets(state.startDocument, state.layerIds);
 
     if (editableLayers.length === 0) {
       return;
@@ -174,17 +188,17 @@ export function CanvasStage({
         let y = layer.y + deltaY;
         const centerX = x + layer.width / 2;
         const centerY = y + layer.height / 2;
-        const canvasCenterX = state.startDocument.settings.width / 2;
-        const canvasCenterY = state.startDocument.settings.height / 2;
+        const verticalTarget = targets.find((target) => Math.abs(centerX - target.x) <= GUIDE_THRESHOLD);
+        const horizontalTarget = targets.find((target) => Math.abs(centerY - target.y) <= GUIDE_THRESHOLD);
 
-        if (Math.abs(centerX - canvasCenterX) <= GUIDE_THRESHOLD) {
-          x = canvasCenterX - layer.width / 2;
-          nextGuides.vertical = true;
+        if (verticalTarget) {
+          x = verticalTarget.x - layer.width / 2;
+          nextGuides.vertical = verticalTarget.x;
         }
 
-        if (Math.abs(centerY - canvasCenterY) <= GUIDE_THRESHOLD) {
-          y = canvasCenterY - layer.height / 2;
-          nextGuides.horizontal = true;
+        if (horizontalTarget) {
+          y = horizontalTarget.y - layer.height / 2;
+          nextGuides.horizontal = horizontalTarget.y;
         }
 
         return [
@@ -311,7 +325,7 @@ export function CanvasStage({
     }
 
     interactionRef.current = null;
-    setGuides({ horizontal: false, vertical: false });
+    setGuides({});
     window.removeEventListener("pointermove", stablePointerMoveHandler.current);
     window.removeEventListener("pointerup", stablePointerUpHandler.current);
   }
@@ -420,8 +434,8 @@ export function CanvasStage({
               </g>
             );
           })}
-        {guides.vertical ? <line className="canvas-guide" x1={document.settings.width / 2} x2={document.settings.width / 2} y1={0} y2={document.settings.height} /> : null}
-        {guides.horizontal ? <line className="canvas-guide" x1={0} x2={document.settings.width} y1={document.settings.height / 2} y2={document.settings.height / 2} /> : null}
+        {guides.vertical !== undefined ? <line className="canvas-guide" x1={guides.vertical} x2={guides.vertical} y1={0} y2={document.settings.height} /> : null}
+        {guides.horizontal !== undefined ? <line className="canvas-guide" x1={0} x2={document.settings.width} y1={guides.horizontal} y2={guides.horizontal} /> : null}
         {selectedLayer ? (
           <g className="canvas-selection" transform={layerTransform(selectedLayer)}>
             <rect
