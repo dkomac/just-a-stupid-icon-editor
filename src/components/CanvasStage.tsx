@@ -1,0 +1,479 @@
+import { useEffect, useRef, useState } from "react";
+import { snapValue } from "../editor/document";
+import type { LogoDocument, LogoLayer } from "../editor/types";
+
+interface CanvasStageProps {
+  document: LogoDocument;
+  selectedLayerIds: string[];
+  showGrid: boolean;
+  snapToGrid: boolean;
+  onSelectLayer: (layerId: string) => void;
+  onChangeDocument: (document: LogoDocument) => void;
+}
+
+type ResizeHandle = "nw" | "ne" | "se" | "sw";
+type InteractionKind = "move" | "resize" | "rotate";
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface CenterGuides {
+  horizontal: boolean;
+  vertical: boolean;
+}
+
+interface InteractionState {
+  kind: InteractionKind;
+  pointerId: number;
+  startPoint: Point;
+  startDocument: LogoDocument;
+  layerIds: string[];
+  handle?: ResizeHandle;
+}
+
+const GUIDE_THRESHOLD = 6;
+const MIN_LAYER_SIZE = 8;
+
+function snapGeometryValue(value: number, gridSize: number, enabled: boolean): number {
+  return enabled ? snapValue(value, gridSize) : value;
+}
+
+function selectedEditableLayers(document: LogoDocument, layerIds: string[]): LogoLayer[] {
+  return document.layers.filter((layer) => layerIds.includes(layer.id) && !layer.locked);
+}
+
+function canvasPoint(svg: SVGSVGElement | null, event: PointerEvent | React.PointerEvent): Point {
+  if (!svg) {
+    return { x: event.clientX, y: event.clientY };
+  }
+
+  const rect = svg.getBoundingClientRect();
+
+  if (rect.width === 0 || rect.height === 0) {
+    return { x: event.clientX, y: event.clientY };
+  }
+
+  return {
+    x: ((event.clientX - rect.left) / rect.width) * Number(svg.getAttribute("width")),
+    y: ((event.clientY - rect.top) / rect.height) * Number(svg.getAttribute("height")),
+  };
+}
+
+function centerOf(layer: LogoLayer): Point {
+  return {
+    x: layer.x + layer.width / 2,
+    y: layer.y + layer.height / 2,
+  };
+}
+
+function renderLayerShape(layer: LogoLayer, forClipPath = false) {
+  const paint = forClipPath
+    ? { fill: "black", stroke: "none", strokeWidth: 0 }
+    : { fill: layer.fill, stroke: layer.stroke ?? "none", strokeWidth: layer.strokeWidth };
+
+  if (layer.type === "rect") {
+    const radius = Math.max(0, Math.min(layer.cornerRadius, layer.width / 2, layer.height / 2));
+    return <rect x={layer.x} y={layer.y} width={layer.width} height={layer.height} rx={radius} ry={radius} {...paint} />;
+  }
+
+  if (layer.type === "ellipse") {
+    return (
+      <ellipse
+        cx={layer.x + layer.width / 2}
+        cy={layer.y + layer.height / 2}
+        rx={layer.width / 2}
+        ry={layer.height / 2}
+        {...paint}
+      />
+    );
+  }
+
+  if (layer.type === "text") {
+    return (
+      <text
+        x={layer.x}
+        y={layer.y + layer.height / 2}
+        dominantBaseline="middle"
+        fontFamily={layer.fontFamily}
+        fontSize={layer.fontSize}
+        fontWeight={layer.fontWeight}
+        {...paint}
+      >
+        {layer.text}
+      </text>
+    );
+  }
+
+  return <path d={layer.path} {...paint} />;
+}
+
+function layerTransform(layer: LogoLayer): string | undefined {
+  if (layer.rotation === 0) {
+    return undefined;
+  }
+
+  const center = centerOf(layer);
+  return `rotate(${layer.rotation} ${center.x} ${center.y})`;
+}
+
+function clipPathId(documentId: string, layerId: string): string {
+  return `canvas-clip-${documentId}-${layerId}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
+export function CanvasStage({
+  document,
+  selectedLayerIds,
+  showGrid,
+  snapToGrid,
+  onSelectLayer,
+  onChangeDocument,
+}: CanvasStageProps) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const interactionRef = useRef<InteractionState | null>(null);
+  const pointerMoveHandlerRef = useRef<(event: PointerEvent) => void>(() => {});
+  const pointerUpHandlerRef = useRef<(event: PointerEvent) => void>(() => {});
+  const stablePointerMoveHandler = useRef((event: PointerEvent) => pointerMoveHandlerRef.current(event));
+  const stablePointerUpHandler = useRef((event: PointerEvent) => pointerUpHandlerRef.current(event));
+  const [guides, setGuides] = useState<CenterGuides>({ horizontal: false, vertical: false });
+  const selectedLayer = document.layers.find((layer) => selectedLayerIds.includes(layer.id) && layer.visible);
+  const gridId = `canvas-grid-${document.id}`;
+  const maskLayerIds = new Set(document.layers.filter((layer) => (layer.maskFor?.length ?? 0) > 0).map((layer) => layer.id));
+  const visibleMaskLayers = document.layers.filter((layer) => layer.visible && maskLayerIds.has(layer.id));
+  const clipPathIdsByLayerId = new Map(visibleMaskLayers.map((layer) => [layer.id, clipPathId(document.id, layer.id)]));
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("pointermove", stablePointerMoveHandler.current);
+      window.removeEventListener("pointerup", stablePointerUpHandler.current);
+    };
+  }, []);
+
+  function commitInteraction(nextDocument: LogoDocument, activeLayerIds: string[]) {
+    onChangeDocument({
+      ...nextDocument,
+      selectedLayerIds: activeLayerIds,
+    });
+  }
+
+  function updateMove(state: InteractionState, point: Point) {
+    const deltaX = point.x - state.startPoint.x;
+    const deltaY = point.y - state.startPoint.y;
+    const editableLayers = selectedEditableLayers(state.startDocument, state.layerIds);
+    const nextGuides: CenterGuides = { horizontal: false, vertical: false };
+    const gridSize = state.startDocument.settings.gridSize;
+
+    if (editableLayers.length === 0) {
+      return;
+    }
+
+    const movedById = new Map(
+      editableLayers.map((layer) => {
+        let x = layer.x + deltaX;
+        let y = layer.y + deltaY;
+        const centerX = x + layer.width / 2;
+        const centerY = y + layer.height / 2;
+        const canvasCenterX = state.startDocument.settings.width / 2;
+        const canvasCenterY = state.startDocument.settings.height / 2;
+
+        if (Math.abs(centerX - canvasCenterX) <= GUIDE_THRESHOLD) {
+          x = canvasCenterX - layer.width / 2;
+          nextGuides.vertical = true;
+        }
+
+        if (Math.abs(centerY - canvasCenterY) <= GUIDE_THRESHOLD) {
+          y = canvasCenterY - layer.height / 2;
+          nextGuides.horizontal = true;
+        }
+
+        return [
+          layer.id,
+          {
+            ...layer,
+            x: snapGeometryValue(x, gridSize, snapToGrid),
+            y: snapGeometryValue(y, gridSize, snapToGrid),
+          } as LogoLayer,
+        ];
+      }),
+    );
+
+    setGuides(nextGuides);
+    commitInteraction(
+      {
+        ...state.startDocument,
+        layers: state.startDocument.layers.map((layer) => movedById.get(layer.id) ?? layer),
+      },
+      state.layerIds,
+    );
+  }
+
+  function updateResize(state: InteractionState, point: Point) {
+    const layer = state.startDocument.layers.find((candidate) => candidate.id === state.layerIds[0]);
+
+    if (!layer || layer.locked || !state.handle) {
+      return;
+    }
+
+    const deltaX = point.x - state.startPoint.x;
+    const deltaY = point.y - state.startPoint.y;
+    const gridSize = state.startDocument.settings.gridSize;
+    let x = layer.x;
+    let y = layer.y;
+    let width = layer.width;
+    let height = layer.height;
+
+    if (state.handle.includes("e")) {
+      width = Math.max(MIN_LAYER_SIZE, layer.width + deltaX);
+    }
+
+    if (state.handle.includes("s")) {
+      height = Math.max(MIN_LAYER_SIZE, layer.height + deltaY);
+    }
+
+    if (state.handle.includes("w")) {
+      width = Math.max(MIN_LAYER_SIZE, layer.width - deltaX);
+      x = layer.x + layer.width - width;
+    }
+
+    if (state.handle.includes("n")) {
+      height = Math.max(MIN_LAYER_SIZE, layer.height - deltaY);
+      y = layer.y + layer.height - height;
+    }
+
+    const nextPatch = {
+      x: snapGeometryValue(x, gridSize, snapToGrid),
+      y: snapGeometryValue(y, gridSize, snapToGrid),
+      width: snapGeometryValue(width, gridSize, snapToGrid),
+      height: snapGeometryValue(height, gridSize, snapToGrid),
+    };
+
+    commitInteraction(
+      {
+        ...state.startDocument,
+        layers: state.startDocument.layers.map((candidate) =>
+          candidate.id === layer.id ? ({ ...candidate, ...nextPatch } as LogoLayer) : candidate,
+        ),
+      },
+      state.layerIds,
+    );
+  }
+
+  function updateRotate(state: InteractionState, point: Point) {
+    const layer = state.startDocument.layers.find((candidate) => candidate.id === state.layerIds[0]);
+
+    if (!layer || layer.locked) {
+      return;
+    }
+
+    const center = centerOf(layer);
+    const angle = (Math.atan2(point.y - center.y, point.x - center.x) * 180) / Math.PI + 90;
+    const rotation = Math.round((angle + 360) % 360);
+
+    commitInteraction(
+      {
+        ...state.startDocument,
+        layers: state.startDocument.layers.map((candidate) =>
+          candidate.id === layer.id ? ({ ...candidate, rotation } as LogoLayer) : candidate,
+        ),
+      },
+      state.layerIds,
+    );
+  }
+
+  function handleWindowPointerMove(event: PointerEvent) {
+    const state = interactionRef.current;
+
+    if (!state || event.pointerId !== state.pointerId) {
+      return;
+    }
+
+    const point = canvasPoint(svgRef.current, event);
+
+    if (state.kind === "move") {
+      updateMove(state, point);
+      return;
+    }
+
+    if (state.kind === "resize") {
+      updateResize(state, point);
+      return;
+    }
+
+    updateRotate(state, point);
+  }
+
+  function handleWindowPointerUp(event: PointerEvent) {
+    const state = interactionRef.current;
+
+    if (state && event.pointerId !== state.pointerId) {
+      return;
+    }
+
+    interactionRef.current = null;
+    setGuides({ horizontal: false, vertical: false });
+    window.removeEventListener("pointermove", stablePointerMoveHandler.current);
+    window.removeEventListener("pointerup", stablePointerUpHandler.current);
+  }
+
+  pointerMoveHandlerRef.current = handleWindowPointerMove;
+  pointerUpHandlerRef.current = handleWindowPointerUp;
+
+  function beginInteraction(event: React.PointerEvent, state: InteractionState) {
+    event.preventDefault();
+    event.stopPropagation();
+    interactionRef.current = state;
+    window.addEventListener("pointermove", stablePointerMoveHandler.current);
+    window.addEventListener("pointerup", stablePointerUpHandler.current);
+  }
+
+  function handleLayerPointerDown(event: React.PointerEvent, layer: LogoLayer) {
+    onSelectLayer(layer.id);
+
+    if (layer.locked) {
+      return;
+    }
+
+    const layerIds = selectedLayerIds.includes(layer.id) ? selectedLayerIds : [layer.id];
+    beginInteraction(event, {
+      kind: "move",
+      pointerId: event.pointerId,
+      startPoint: canvasPoint(svgRef.current, event),
+      startDocument: document,
+      layerIds,
+    });
+  }
+
+  function handleResizePointerDown(event: React.PointerEvent, handle: ResizeHandle) {
+    if (!selectedLayer || selectedLayer.locked) {
+      return;
+    }
+
+    beginInteraction(event, {
+      kind: "resize",
+      pointerId: event.pointerId,
+      startPoint: canvasPoint(svgRef.current, event),
+      startDocument: document,
+      layerIds: [selectedLayer.id],
+      handle,
+    });
+  }
+
+  function handleRotatePointerDown(event: React.PointerEvent) {
+    if (!selectedLayer || selectedLayer.locked) {
+      return;
+    }
+
+    beginInteraction(event, {
+      kind: "rotate",
+      pointerId: event.pointerId,
+      startPoint: canvasPoint(svgRef.current, event),
+      startDocument: document,
+      layerIds: [selectedLayer.id],
+    });
+  }
+
+  return (
+    <div className="canvas-stage" data-grid={showGrid}>
+      <svg
+        ref={svgRef}
+        className="canvas-svg"
+        width={document.settings.width}
+        height={document.settings.height}
+        viewBox={`0 0 ${document.settings.width} ${document.settings.height}`}
+        role="img"
+        aria-label={document.name}
+      >
+        <defs>
+          {showGrid ? (
+            <pattern id={gridId} width={document.settings.gridSize} height={document.settings.gridSize} patternUnits="userSpaceOnUse">
+              <path d={`M ${document.settings.gridSize} 0 L 0 0 0 ${document.settings.gridSize}`} className="canvas-grid-line" />
+            </pattern>
+          ) : null}
+          {visibleMaskLayers.map((layer) => (
+            <clipPath key={layer.id} id={clipPathIdsByLayerId.get(layer.id)} clipPathUnits="userSpaceOnUse">
+              {renderLayerShape(layer, true)}
+            </clipPath>
+          ))}
+        </defs>
+        <rect width="100%" height="100%" fill={document.settings.background} />
+        {showGrid ? <rect width="100%" height="100%" fill={`url(#${gridId})`} className="canvas-grid-fill" /> : null}
+        {document.layers
+          .filter((layer) => layer.visible)
+          .map((layer) => {
+            const clipId = layer.maskedBy ? clipPathIdsByLayerId.get(layer.maskedBy) : undefined;
+
+            return (
+              <g
+                key={layer.id}
+                data-testid={`canvas-layer-${layer.id}`}
+                className="canvas-layer"
+                data-selected={selectedLayerIds.includes(layer.id)}
+                data-locked={layer.locked}
+                opacity={layer.opacity}
+                transform={layerTransform(layer)}
+                clipPath={clipId ? `url(#${clipId})` : undefined}
+                onPointerDown={(event) => handleLayerPointerDown(event, layer)}
+              >
+                <title>{layer.name}</title>
+                {renderLayerShape(layer)}
+              </g>
+            );
+          })}
+        {guides.vertical ? <line className="canvas-guide" x1={document.settings.width / 2} x2={document.settings.width / 2} y1={0} y2={document.settings.height} /> : null}
+        {guides.horizontal ? <line className="canvas-guide" x1={0} x2={document.settings.width} y1={document.settings.height / 2} y2={document.settings.height / 2} /> : null}
+        {selectedLayer ? (
+          <g className="canvas-selection" transform={layerTransform(selectedLayer)}>
+            <rect
+              className="canvas-selection-outline"
+              x={selectedLayer.x}
+              y={selectedLayer.y}
+              width={selectedLayer.width}
+              height={selectedLayer.height}
+            />
+            {!selectedLayer.locked ? (
+              <>
+                {(["nw", "ne", "se", "sw"] as ResizeHandle[]).map((handle) => {
+                  const x = handle.includes("w") ? selectedLayer.x : selectedLayer.x + selectedLayer.width;
+                  const y = handle.includes("n") ? selectedLayer.y : selectedLayer.y + selectedLayer.height;
+
+                  return (
+                    <rect
+                      key={handle}
+                      className="canvas-resize-handle"
+                      aria-label={`Resize ${handle}`}
+                      x={x - 5}
+                      y={y - 5}
+                      width={10}
+                      height={10}
+                      role="button"
+                      tabIndex={0}
+                      onPointerDown={(event) => handleResizePointerDown(event, handle)}
+                    />
+                  );
+                })}
+                <line
+                  className="canvas-rotate-arm"
+                  x1={selectedLayer.x + selectedLayer.width / 2}
+                  y1={selectedLayer.y}
+                  x2={selectedLayer.x + selectedLayer.width / 2}
+                  y2={selectedLayer.y - 28}
+                />
+                <circle
+                  className="canvas-rotate-handle"
+                  aria-label="Rotate layer"
+                  cx={selectedLayer.x + selectedLayer.width / 2}
+                  cy={selectedLayer.y - 34}
+                  r={7}
+                  role="button"
+                  tabIndex={0}
+                  onPointerDown={handleRotatePointerDown}
+                />
+              </>
+            ) : null}
+          </g>
+        ) : null}
+      </svg>
+    </div>
+  );
+}

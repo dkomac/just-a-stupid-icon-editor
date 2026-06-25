@@ -1,13 +1,14 @@
 import { useState } from "react";
+import { CanvasStage } from "./components/CanvasStage";
 import { ExportDialog, type ExportDialogOptions } from "./components/ExportDialog";
 import { Inspector } from "./components/Inspector";
 import { LayersPanel } from "./components/LayersPanel";
 import { Toolbar, type AddLayerKind, type EditorTool } from "./components/Toolbar";
 import { TopBar } from "./components/TopBar";
-import { addLayer } from "./editor/document";
+import { addLayer, applyMask, releaseMask } from "./editor/document";
 import { createHistory, pushHistory, redo, undo } from "./editor/history";
 import { sampleDocument } from "./editor/sample";
-import { polygonPointsToPath, renderDocumentSvg, starPointsToPath } from "./editor/svg";
+import { polygonPointsToPath, starPointsToPath } from "./editor/svg";
 import type { LogoDocument, NewLayerInput } from "./editor/types";
 
 function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerInput {
@@ -83,10 +84,10 @@ export default function App() {
   const [exportOpen, setExportOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(sampleDocument.settings.snapToGrid);
+  const [selectedMaskLayerId, setSelectedMaskLayerId] = useState<string>();
   const [zoom] = useState(1);
   const document = history.present;
   const selectedLayerId = selectedLayerIds[0];
-  const sampleSvg = renderDocumentSvg(document);
 
   function commitDocument(nextDocument: LogoDocument) {
     const availableLayerIds = new Set(nextDocument.layers.map((layer) => layer.id));
@@ -95,6 +96,7 @@ export default function App() {
     setHistory((current) => pushHistory(current, { ...nextDocument, selectedLayerIds: nextSelectedLayerIds }));
     setSelectedLayerIds(nextSelectedLayerIds);
     setSnapToGrid(nextDocument.settings.snapToGrid);
+    setSelectedMaskLayerId((current) => (current && availableLayerIds.has(current) ? current : undefined));
   }
 
   function replaceSelection(layerIds: string[]) {
@@ -146,6 +148,22 @@ export default function App() {
     });
   }
 
+  function handleUseSelectedLayerAsMask(layerId: string) {
+    setSelectedMaskLayerId(layerId);
+  }
+
+  function handleApplySelectedMask(targetLayerId: string) {
+    if (!selectedMaskLayerId || selectedMaskLayerId === targetLayerId) {
+      return;
+    }
+
+    commitDocument(applyMask(document, selectedMaskLayerId, targetLayerId));
+  }
+
+  function handleReleaseSelectedMask(targetLayerId: string) {
+    commitDocument(releaseMask(document, targetLayerId));
+  }
+
   function handleDownload(_options: ExportDialogOptions) {
     setExportOpen(false);
   }
@@ -169,11 +187,13 @@ export default function App() {
       <section className="editor-grid">
         <Toolbar activeTool={activeTool} onSelectTool={setActiveTool} onAddLayer={handleAddLayer} />
         <section className="canvas-wrap" aria-label="Logo canvas" role="region">
-          <div
-            className="canvas-stage"
-            data-grid={showGrid}
-            style={{ transform: `scale(${zoom})` }}
-            dangerouslySetInnerHTML={{ __html: sampleSvg }}
+          <CanvasStage
+            document={document}
+            selectedLayerIds={selectedLayerIds}
+            showGrid={showGrid}
+            snapToGrid={snapToGrid}
+            onSelectLayer={(layerId) => replaceSelection([layerId])}
+            onChangeDocument={commitDocument}
           />
         </section>
         <LayersPanel
@@ -182,7 +202,15 @@ export default function App() {
           onSelectLayer={(layerId) => replaceSelection([layerId])}
           onChangeDocument={commitDocument}
         />
-        <Inspector document={document} selectedLayerId={selectedLayerId} onChangeDocument={commitDocument} />
+        <Inspector
+          document={document}
+          selectedLayerId={selectedLayerId}
+          maskLayerId={selectedMaskLayerId}
+          onUseSelectedLayerAsMask={handleUseSelectedLayerAsMask}
+          onApplySelectedMaskToSelectedTarget={handleApplySelectedMask}
+          onReleaseMaskFromSelectedTarget={handleReleaseSelectedMask}
+          onChangeDocument={commitDocument}
+        />
       </section>
       <ExportDialog
         open={exportOpen}

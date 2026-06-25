@@ -216,6 +216,82 @@ select:focus-visible {
   box-shadow: 0 8px 24px oklch(0.25 0.02 255 / 0.12);
 }
 
+.canvas-svg {
+  touch-action: none;
+  user-select: none;
+}
+
+.canvas-grid-line {
+  fill: none;
+  stroke: oklch(0.82 0.014 255 / 0.72);
+  stroke-width: 1;
+}
+
+.canvas-grid-fill {
+  pointer-events: none;
+}
+
+.canvas-layer {
+  cursor: grab;
+}
+
+.canvas-layer[data-locked="true"] {
+  cursor: default;
+}
+
+.canvas-layer:active {
+  cursor: grabbing;
+}
+
+.canvas-selection {
+  pointer-events: none;
+}
+
+.canvas-selection-outline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-dasharray: 6 4;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.canvas-resize-handle,
+.canvas-rotate-handle {
+  fill: white;
+  stroke: var(--accent);
+  stroke-width: 2;
+  pointer-events: all;
+  vector-effect: non-scaling-stroke;
+}
+
+.canvas-resize-handle {
+  cursor: nwse-resize;
+}
+
+.canvas-resize-handle[aria-label$="ne"],
+.canvas-resize-handle[aria-label$="sw"] {
+  cursor: nesw-resize;
+}
+
+.canvas-rotate-arm {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.canvas-rotate-handle {
+  cursor: grab;
+}
+
+.canvas-guide {
+  stroke: oklch(0.68 0.18 190);
+  stroke-dasharray: 5 5;
+  stroke-width: 1.5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
 .side-panel {
   padding: 12px;
   overflow: auto;
@@ -425,6 +501,22 @@ select:focus-visible {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.mask-actions {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mask-actions .secondary-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.mask-actions .secondary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .export-dialog {

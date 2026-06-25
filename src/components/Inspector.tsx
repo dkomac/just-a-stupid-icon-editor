@@ -4,6 +4,10 @@ import { ColorField, NumberField, PanelSection, TextField } from "./ui";
 interface InspectorProps {
   document: LogoDocument;
   selectedLayerId?: string;
+  maskLayerId?: string;
+  onUseSelectedLayerAsMask?: (layerId: string) => void;
+  onApplySelectedMaskToSelectedTarget?: (targetLayerId: string) => void;
+  onReleaseMaskFromSelectedTarget?: (targetLayerId: string) => void;
   onChangeDocument: (document: LogoDocument) => void;
 }
 
@@ -24,8 +28,17 @@ function updateLayer(document: LogoDocument, layerId: string, patch: Partial<Log
   };
 }
 
-export function Inspector({ document, selectedLayerId, onChangeDocument }: InspectorProps) {
+export function Inspector({
+  document,
+  selectedLayerId,
+  maskLayerId,
+  onUseSelectedLayerAsMask,
+  onApplySelectedMaskToSelectedTarget,
+  onReleaseMaskFromSelectedTarget,
+  onChangeDocument,
+}: InspectorProps) {
   const selectedLayer = document.layers.find((layer) => layer.id === selectedLayerId);
+  const maskLayer = document.layers.find((layer) => layer.id === maskLayerId);
 
   if (!selectedLayer) {
     return (
@@ -190,13 +203,39 @@ export function Inspector({ document, selectedLayerId, onChangeDocument }: Inspe
           />
         </PanelSection>
       ) : null}
-      {selectedLayer.maskedBy || selectedLayer.maskFor?.length ? (
-        <PanelSection title="Masking">
+      <PanelSection title="Masking">
+        <div className="mask-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => onUseSelectedLayerAsMask?.(selectedLayer.id)}
+          >
+            Use selected layer as mask
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!maskLayer || maskLayer.id === selectedLayer.id}
+            onClick={() => onApplySelectedMaskToSelectedTarget?.(selectedLayer.id)}
+          >
+            Apply selected mask to selected target
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!selectedLayer.maskedBy}
+            onClick={() => onReleaseMaskFromSelectedTarget?.(selectedLayer.id)}
+          >
+            Release mask from selected target
+          </button>
+        </div>
+        {maskLayer ? <p className="panel-note">Selected mask: {maskLayer.name}</p> : null}
+        {selectedLayer.maskedBy || selectedLayer.maskFor?.length ? (
           <p className="panel-note">
             {selectedLayer.maskedBy ? "This layer is clipped by another layer." : "This layer is used as a mask."}
           </p>
-        </PanelSection>
-      ) : null}
+        ) : null}
+      </PanelSection>
     </aside>
   );
 }
