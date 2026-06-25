@@ -126,3 +126,25 @@ select:focus-visible {
     min-height: 220px;
   }
 }
+
+@media (max-width: 520px) {
+  .editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(320px, 1fr) auto auto;
+    grid-template-areas:
+      "toolbar"
+      "canvas"
+      "layers"
+      "inspector";
+  }
+
+  .toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 8px;
+  }
+
+  .canvas-wrap {
+    padding: 16px;
+  }
+}

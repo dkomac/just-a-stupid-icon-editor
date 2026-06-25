@@ -23,3 +23,15 @@ test("keeps side panels usable on small screens", async ({ page }) => {
   expect(layersBox?.width).toBeGreaterThan(300);
   expect(inspectorBox?.width).toBeGreaterThan(300);
 });
+
+test("does not horizontally overflow at 320px", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.goto("/");
+
+  const { clientWidth, scrollWidth } = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+});
