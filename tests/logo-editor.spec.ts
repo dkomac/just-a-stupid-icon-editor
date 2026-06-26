@@ -14,6 +14,24 @@ test("opens directly into the logo editor shell", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Inspector" })).toBeVisible();
 });
 
+test("centers toolbar tools in the rail", async ({ page }) => {
+  await page.goto("/");
+
+  const toolbar = page.getByRole("navigation", { name: "Shape tools" });
+  const toolbarBox = await toolbar.boundingBox();
+  expect(toolbarBox).toBeTruthy();
+
+  const toolbarCenter = toolbarBox!.x + toolbarBox!.width / 2;
+  const toolNames = ["Select", "Rectangle", "Ellipse", "Polygon", "Star", "Line", "Text"];
+
+  for (const toolName of toolNames) {
+    const toolBox = await toolbar.getByRole("button", { name: toolName }).boundingBox();
+    expect(toolBox).toBeTruthy();
+    const toolCenter = toolBox!.x + toolBox!.width / 2;
+    expect(Math.abs(toolCenter - toolbarCenter)).toBeLessThanOrEqual(1);
+  }
+});
+
 test("creates a shape, edits it in the inspector, and exports svg", async ({ page }) => {
   await page.goto("/");
 
