@@ -13,7 +13,7 @@ import { IconButton } from "./ui";
 interface LayersPanelProps {
   document: LogoDocument;
   selectedLayerIds: string[];
-  onSelectLayer: (layerId: string) => void;
+  onSelectLayer: (layerId: string, additive?: boolean) => void;
   onChangeDocument: (document: LogoDocument) => void;
 }
 
@@ -93,7 +93,7 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
                   aria-label={`Select layer ${layer.name}`}
                   aria-pressed={selected}
                   title={`Select layer ${layer.name}`}
-                  onClick={() => onSelectLayer(layer.id)}
+                  onClick={(event) => onSelectLayer(layer.id, event.shiftKey || event.metaKey || event.ctrlKey)}
                 >
                   <span className="layer-kind">{layer.type}</span>
                   <span className="layer-name">{layer.name}</span>

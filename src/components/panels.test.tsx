@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -35,6 +35,17 @@ describe("editor panels", () => {
     await userEvent.click(screen.getByRole("button", { name: "Hide Badge" }));
 
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it("adds layers to the selection with modifier clicks", async () => {
+    const first = addLayer(createDocument(), { type: "rect", name: "First", x: 0, y: 0, width: 100, height: 100 });
+    const doc = addLayer(first, { type: "ellipse", name: "Second", x: 120, y: 0, width: 80, height: 80 });
+    const onSelect = vi.fn();
+
+    render(<LayersPanel document={doc} selectedLayerIds={[doc.layers[0].id]} onSelectLayer={onSelect} onChangeDocument={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Select layer Second" }), { shiftKey: true });
+
+    expect(onSelect).toHaveBeenCalledWith(doc.layers[1].id, true);
   });
 
   it("uses pressed state only for toggle buttons", () => {
@@ -143,6 +154,24 @@ describe("editor panels", () => {
     expect(screen.getByLabelText("Name")).toBeDisabled();
     expect(screen.getByLabelText("Width")).toBeDisabled();
     expect(screen.getByLabelText("Fill")).toBeDisabled();
+  });
+
+  it("aligns multiple selected layers from the inspector", async () => {
+    const first = addLayer(createDocument(), { type: "rect", name: "First", x: 10, y: 0, width: 100, height: 100 });
+    const doc = addLayer(first, { type: "ellipse", name: "Second", x: 120, y: 0, width: 80, height: 80 });
+    const onChange = vi.fn();
+
+    render(<Inspector document={doc} selectedLayerIds={doc.layers.map((layer) => layer.id)} onChangeDocument={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: "Align left" }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layers: [
+          expect.objectContaining({ id: doc.layers[0].id, x: 10 }),
+          expect.objectContaining({ id: doc.layers[1].id, x: 10 }),
+        ],
+      }),
+    );
   });
 
   it("closes the export dialog with Escape and restores focus", async () => {

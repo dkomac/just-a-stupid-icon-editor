@@ -122,6 +122,20 @@ describe("App", () => {
     expect(screen.queryByText("Masked")).not.toBeInTheDocument();
   });
 
+  it("multi-selects layers and aligns them from the inspector", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Rectangle" }));
+    await user.click(screen.getByRole("button", { name: "Ellipse" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select layer Rectangle" }), { shiftKey: true });
+    await user.click(screen.getByRole("button", { name: "Align left" }));
+
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Select layer Rectangle" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Select layer Ellipse" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("exports svg with the document filename", async () => {
     const user = userEvent.setup();
     const svgBlob = new Blob(["svg"], { type: "image/svg+xml" });

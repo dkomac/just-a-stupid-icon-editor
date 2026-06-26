@@ -52,7 +52,7 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
       ...base,
       type: "path",
       name: "Polygon",
-      path: polygonPointsToPath(centerX, centerY, 68, 6),
+      path: polygonPointsToPath(50, 50, 46, 6),
     };
   }
 
@@ -61,7 +61,7 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
       ...base,
       type: "path",
       name: "Star",
-      path: starPointsToPath(centerX, centerY, 74, 34, 5),
+      path: starPointsToPath(50, 50, 48, 22, 5),
       fill: "#ffb703",
     };
   }
@@ -73,7 +73,7 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
     height: 24,
     fill: "transparent",
     strokeWidth: 8,
-    path: `M ${Math.round(centerX - 72)} ${Math.round(centerY)} L ${Math.round(centerX + 72)} ${Math.round(centerY)}`,
+    path: "M 0 50 L 100 50",
   };
 }
 
@@ -108,6 +108,19 @@ export default function App() {
         selectedLayerIds: layerIds,
       },
     }));
+  }
+
+  function handleSelectLayer(layerId: string, additive = false) {
+    if (!additive) {
+      replaceSelection([layerId]);
+      return;
+    }
+
+    const nextLayerIds = selectedLayerIds.includes(layerId)
+      ? selectedLayerIds.filter((id) => id !== layerId)
+      : [...selectedLayerIds, layerId];
+
+    replaceSelection(nextLayerIds.length > 0 ? nextLayerIds : [layerId]);
   }
 
   function handleAddLayer(kind: AddLayerKind) {
@@ -203,19 +216,20 @@ export default function App() {
             selectedLayerIds={selectedLayerIds}
             showGrid={showGrid}
             snapToGrid={snapToGrid}
-            onSelectLayer={(layerId) => replaceSelection([layerId])}
+            onSelectLayer={handleSelectLayer}
             onChangeDocument={commitDocument}
           />
         </section>
         <LayersPanel
           document={document}
           selectedLayerIds={selectedLayerIds}
-          onSelectLayer={(layerId) => replaceSelection([layerId])}
+          onSelectLayer={handleSelectLayer}
           onChangeDocument={commitDocument}
         />
         <Inspector
           document={document}
           selectedLayerId={selectedLayerId}
+          selectedLayerIds={selectedLayerIds}
           maskLayerId={selectedMaskLayerId}
           onUseSelectedLayerAsMask={handleUseSelectedLayerAsMask}
           onApplySelectedMaskToSelectedTarget={handleApplySelectedMask}

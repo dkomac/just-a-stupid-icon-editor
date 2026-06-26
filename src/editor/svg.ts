@@ -2,6 +2,9 @@ import type { LogoDocument, LogoLayer } from "./types";
 
 export interface RenderSvgOptions {
   showMaskLayers?: boolean;
+  width?: number;
+  height?: number;
+  background?: string;
 }
 
 export interface LayerRenderOptions {
@@ -143,7 +146,11 @@ function layerShapeMarkup(layer: LogoLayer, forClipPath = false): string {
     return `<text x="${escapeAttribute(x)}" y="${escapeAttribute(y + height / 2)}" dominant-baseline="middle" font-family="${escapeAttribute(safeFontFamily(layer.fontFamily))}" font-size="${escapeAttribute(fontSize)}" font-weight="${escapeAttribute(fontWeight)}" ${paint}${transform}>${escapeText(layer.text)}</text>`;
   }
 
-  return `<path d="${escapeAttribute(layer.path)}" ${paint}${transform} />`;
+  const rotation = safeNumber(layer.rotation);
+  const rotationTransform = rotation === 0 ? "" : `<g transform="rotate(${point(rotation)} ${point(width / 2)} ${point(height / 2)})">`;
+  const rotationClose = rotation === 0 ? "" : "</g>";
+
+  return `<g transform="translate(${point(x)} ${point(y)})">${rotationTransform}<g transform="scale(${point(width / 100)} ${point(height / 100)})"><path d="${escapeAttribute(layer.path)}" ${paint} /></g>${rotationClose}</g>`;
 }
 
 export function layerToSvgMarkup(layer: LogoLayer, options: LayerRenderOptions = {}): string {
@@ -213,9 +220,11 @@ export function starPointsToPath(
 }
 
 export function renderDocumentSvg(document: LogoDocument, options: RenderSvgOptions = {}): string {
-  const width = safePositiveNumber(document.settings.width, 512);
-  const height = safePositiveNumber(document.settings.height, 512);
-  const background = safePaint(document.settings.background, "#ffffff");
+  const viewBoxWidth = safePositiveNumber(document.settings.width, 512);
+  const viewBoxHeight = safePositiveNumber(document.settings.height, 512);
+  const width = safePositiveNumber(options.width ?? viewBoxWidth, viewBoxWidth);
+  const height = safePositiveNumber(options.height ?? viewBoxHeight, viewBoxHeight);
+  const background = safePaint(options.background ?? document.settings.background, "#ffffff");
   const maskLayerIds = new Set(
     document.layers
       .filter((layer) => (layer.maskFor?.length ?? 0) > 0)
@@ -250,7 +259,7 @@ export function renderDocumentSvg(document: LogoDocument, options: RenderSvgOpti
     .filter(Boolean);
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${escapeAttribute(width)}" height="${escapeAttribute(height)}" viewBox="0 0 ${escapeAttribute(width)} ${escapeAttribute(height)}" role="img" aria-label="${escapeAttribute(document.name)}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${escapeAttribute(width)}" height="${escapeAttribute(height)}" viewBox="0 0 ${escapeAttribute(viewBoxWidth)} ${escapeAttribute(viewBoxHeight)}" role="img" aria-label="${escapeAttribute(document.name)}">`,
     background === "transparent" ? "" : `<rect width="100%" height="100%" fill="${escapeAttribute(background)}" />`,
     clipPaths.length > 0 ? `<defs>${clipPaths.join("")}</defs>` : "",
     ...body,

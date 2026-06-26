@@ -31,6 +31,25 @@ describe("svg serialization", () => {
     expect(svg).toContain('rx="10"');
   });
 
+  it("renders path layers inside their editable geometry box", () => {
+    const doc = addLayer(createDocument(), {
+      type: "path",
+      name: "Triangle",
+      x: 40,
+      y: 50,
+      width: 200,
+      height: 100,
+      rotation: 15,
+      path: "M 50 0 L 100 100 L 0 100 Z",
+    });
+
+    const svg = renderDocumentSvg(doc);
+
+    expect(svg).toContain('transform="translate(40 50)"');
+    expect(svg).toContain('transform="rotate(15 100 50)"');
+    expect(svg).toContain('transform="scale(2 1)"');
+  });
+
   it("skips hidden layers", () => {
     const visibleDoc = addLayer(createDocument(), { type: "rect", name: "Hidden", x: 0, y: 0, width: 100, height: 100 });
     const doc = toggleLayerVisible(visibleDoc, visibleDoc.layers[0].id);

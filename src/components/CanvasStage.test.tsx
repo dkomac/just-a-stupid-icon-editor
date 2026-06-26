@@ -53,6 +53,29 @@ describe("CanvasStage", () => {
     expect(onChangeDocument).toHaveBeenCalledTimes(1);
   });
 
+  it("renders path layers from their editable geometry while dragging", () => {
+    const doc = addLayer(createDocument(), {
+      type: "path",
+      name: "Bolt",
+      x: 20,
+      y: 30,
+      width: 100,
+      height: 80,
+      path: "M 0 0 L 100 50 L 0 100 Z",
+    });
+
+    render(<CanvasStage document={doc} selectedLayerIds={[doc.layers[0].id]} showGrid snapToGrid onSelectLayer={vi.fn()} onChangeDocument={vi.fn()} />);
+    const layer = screen.getByTestId(`canvas-layer-${doc.layers[0].id}`);
+    expect(layer.querySelector('g[transform="translate(20 30)"]')).toBeInTheDocument();
+
+    dispatchPointerEvent(layer, "pointerdown", { clientX: 30, clientY: 40 });
+    dispatchPointerEvent(window, "pointermove", { clientX: 48, clientY: 56 });
+
+    expect(screen.getByTestId(`canvas-layer-${doc.layers[0].id}`).querySelector('g[transform="translate(40 48)"]')).toBeInTheDocument();
+
+    dispatchPointerEvent(window, "pointerup", {});
+  });
+
   it("commits only the final drag document after multiple pointer moves", () => {
     const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 20, y: 30, width: 120, height: 80 });
     const onChangeDocument = vi.fn();

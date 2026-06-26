@@ -578,6 +578,17 @@ select:focus-visible {
   cursor: not-allowed;
 }
 
+.alignment-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.alignment-actions .secondary-button {
+  justify-content: center;
+  min-width: 0;
+}
+
 .export-dialog {
   width: min(420px, 100%);
   max-height: min(680px, calc(100vh - 40px));

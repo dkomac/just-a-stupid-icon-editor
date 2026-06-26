@@ -121,7 +121,13 @@ function renderLayerShape(layer: LogoLayer, forClipPath = false) {
     );
   }
 
-  return <path d={layer.path} {...paint} />;
+  return (
+    <g transform={`translate(${layer.x} ${layer.y})`}>
+      <g transform={`scale(${layer.width / 100} ${layer.height / 100})`}>
+        <path d={layer.path} {...paint} />
+      </g>
+    </g>
+  );
 }
 
 function layerTransform(layer: LogoLayer): string | undefined {
@@ -544,7 +550,7 @@ export function CanvasStage({
           ) : null}
           {visibleMaskLayers.map((layer) => (
             <clipPath key={layer.id} id={clipPathIdsByLayerId.get(layer.id)} clipPathUnits="userSpaceOnUse">
-              {renderLayerShape(layer, true)}
+              <g transform={layerTransform(layer)}>{renderLayerShape(layer, true)}</g>
             </clipPath>
           ))}
         </defs>

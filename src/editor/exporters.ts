@@ -172,14 +172,10 @@ function renderExportSvg(document: LogoDocument, options: Partial<ExportOptions>
     { allowTransparent },
   );
 
-  return renderDocumentSvg({
-    ...document,
-    settings: {
-      ...document.settings,
-      width: exportOptions.width,
-      height: exportOptions.height,
-      background: exportOptions.background,
-    },
+  return renderDocumentSvg(document, {
+    width: exportOptions.width,
+    height: exportOptions.height,
+    background: exportOptions.background,
   });
 }
 

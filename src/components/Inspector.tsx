@@ -1,9 +1,11 @@
-import type { LogoDocument, LogoLayer } from "../editor/types";
+import { alignLayers } from "../editor/document";
+import type { AlignmentMode, LogoDocument, LogoLayer } from "../editor/types";
 import { ColorField, NumberField, PanelSection, TextField } from "./ui";
 
 interface InspectorProps {
   document: LogoDocument;
   selectedLayerId?: string;
+  selectedLayerIds?: string[];
   maskLayerId?: string;
   onUseSelectedLayerAsMask?: (layerId: string) => void;
   onApplySelectedMaskToSelectedTarget?: (targetLayerId: string) => void;
@@ -31,13 +33,15 @@ function updateLayer(document: LogoDocument, layerId: string, patch: Partial<Log
 export function Inspector({
   document,
   selectedLayerId,
+  selectedLayerIds,
   maskLayerId,
   onUseSelectedLayerAsMask,
   onApplySelectedMaskToSelectedTarget,
   onReleaseMaskFromSelectedTarget,
   onChangeDocument,
 }: InspectorProps) {
-  const selectedLayer = document.layers.find((layer) => layer.id === selectedLayerId);
+  const activeLayerIds = selectedLayerIds ?? (selectedLayerId ? [selectedLayerId] : []);
+  const selectedLayer = document.layers.find((layer) => layer.id === activeLayerIds[0]);
   const maskLayer = document.layers.find((layer) => layer.id === maskLayerId);
 
   if (!selectedLayer) {
@@ -93,6 +97,32 @@ export function Inspector({
           onChange={(name) => onChangeDocument(updateLayer(document, selectedLayer.id, { name }))}
         />
       </PanelSection>
+      {activeLayerIds.length > 1 ? (
+        <PanelSection title="Alignment">
+          <div className="alignment-actions" role="group" aria-label="Alignment controls">
+            {(
+              [
+                ["left", "Align left"],
+                ["center", "Align center"],
+                ["right", "Align right"],
+                ["top", "Align top"],
+                ["middle", "Align middle"],
+                ["bottom", "Align bottom"],
+              ] as Array<[AlignmentMode, string]>
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                className="secondary-button"
+                disabled={disabled}
+                onClick={() => onChangeDocument(alignLayers(document, activeLayerIds, mode))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </PanelSection>
+      ) : null}
       <PanelSection title="Geometry">
         <div className="field-grid">
           <NumberField

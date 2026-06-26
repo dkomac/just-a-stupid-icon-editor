@@ -49,6 +49,16 @@ describe("exporters", () => {
     expect(svg).not.toContain('<rect width="100%" height="100%"');
   });
 
+  it("keeps the design viewBox when exporting custom svg dimensions", async () => {
+    const document = createDocument();
+    const blob = createSvgBlob(document, { width: 1024, height: 256, background: "#ffffff" });
+    const svg = await blob.text();
+
+    expect(svg).toContain('width="1024"');
+    expect(svg).toContain('height="256"');
+    expect(svg).toContain('viewBox="0 0 512 512"');
+  });
+
   it("reports webm support from MediaRecorder", () => {
     vi.stubGlobal("MediaRecorder", { isTypeSupported: () => true });
 
@@ -68,6 +78,7 @@ describe("exporters", () => {
     expect(raster.drawImage).toHaveBeenCalledOnce();
     expect(raster.toBlob).toHaveBeenCalledWith(expect.any(Function), "image/jpeg", 0.8);
     expect(raster.renderedSvg()).toContain("<svg");
+    expect(raster.renderedSvg()).toContain('viewBox="0 0 512 512"');
   });
 
   it("creates a pdf blob", async () => {

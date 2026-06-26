@@ -24,7 +24,7 @@ The first screen is the editor:
 
 - Top command bar: document name, undo/redo, zoom, snap toggle, export.
 - Left toolbar: shape and text creation tools.
-- Center workspace: canvas with pan, zoom, selection handles, grid, and snapping guides.
+- Center workspace: canvas with selection handles, grid, and snapping guides.
 - Right inspector: precise values for the selected layer or document.
 - Left or right layer panel: reorderable layers with visibility, lock, duplicate, delete, rename, and mask indicators.
 
@@ -42,9 +42,9 @@ Panels should be dense enough for repeated use, but not visually heavy. Cards ar
 
 ## Interaction
 
-Users can drag, resize, rotate, align, and layer objects directly on the canvas. Every direct manipulation should update the inspector values. Every inspector edit should update the canvas immediately.
+Users can drag, resize, rotate, align, and layer objects. Direct canvas manipulation should update the inspector values. Every inspector edit should update the canvas immediately.
 
-Snapping should support grid, canvas center, object edges, and object centers. Alignment commands should support left, center, right, top, middle, bottom, distribute horizontal, and distribute vertical where multiple layers are selected.
+Snapping should support grid, canvas center, and object centers. Alignment commands should support left, center, right, top, middle, and bottom where multiple layers are selected.
 
 Masking should use simple commands: use selected layer as a mask, apply a mask to selected layer, release mask, and show mask status in the layer panel.
 
