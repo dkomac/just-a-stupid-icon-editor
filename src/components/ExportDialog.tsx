@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { normalizeExportOptions } from "../editor/exporters";
 import type { ExportOptions, LogoDocument } from "../editor/types";
 import { CheckboxField, ColorField, IconButton, NumberField, SelectField } from "./ui";
 
@@ -11,7 +12,7 @@ interface ExportDialogProps {
   open: boolean;
   document: LogoDocument;
   onClose: () => void;
-  onDownload: (options: ExportDialogOptions) => void;
+  onDownload: (options: ExportDialogOptions) => void | Promise<void>;
 }
 
 const formats: Array<{ value: ExportOptions["format"]; label: string }> = [
@@ -35,19 +36,29 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
   const [transparent, setTransparent] = useState(false);
   const [quality, setQuality] = useState(0.92);
   const [scale, setScale] = useState(1);
+  const [exportError, setExportError] = useState<string>();
   const transparentAvailable = supportsTransparency(format);
   const normalizedOptions = useMemo<ExportDialogOptions>(
-    () => ({
-      format,
-      width: Math.max(1, width),
-      height: Math.max(1, height),
-      background: transparent && transparentAvailable ? "transparent" : background,
-      transparent: transparent && transparentAvailable,
-      quality: format === "jpg" || format === "webm" ? quality : undefined,
-      scale: Math.max(1, scale),
-    }),
+    () => {
+      const useTransparentBackground = transparent && transparentAvailable;
+      const exportOptions = normalizeExportOptions({
+        format,
+        width,
+        height,
+        background: useTransparentBackground ? "transparent" : background,
+        quality: format === "jpg" || format === "webm" ? quality : undefined,
+        scale,
+      });
+
+      return {
+        ...exportOptions,
+        background: useTransparentBackground ? "transparent" : exportOptions.background,
+        transparent: useTransparentBackground,
+      };
+    },
     [background, format, height, quality, scale, transparent, transparentAvailable, width],
   );
+  const selectedFormatLabel = formats.find((item) => item.value === format)?.label ?? format.toUpperCase();
 
   function closeDialog() {
     const dialog = dialogRef.current;
@@ -63,11 +74,22 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
     restoreFocusRef.current = null;
   }
 
+  async function handleDownload() {
+    setExportError(undefined);
+
+    try {
+      await onDownload(normalizedOptions);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Export failed. Please try again.");
+    }
+  }
+
   useEffect(() => {
     if (open) {
       setWidth(document.settings.width);
       setHeight(document.settings.height);
       setBackground(document.settings.background);
+      setExportError(undefined);
     }
   }, [document.settings.background, document.settings.height, document.settings.width, open]);
 
@@ -155,13 +177,18 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
             onChange={setQuality}
           />
         </div>
+        {exportError ? (
+          <p className="dialog-error" role="alert">
+            {exportError}
+          </p>
+        ) : null}
       </div>
       <div className="dialog-actions">
         <button type="button" className="secondary-button" onClick={closeDialog}>
           Cancel
         </button>
-        <button type="button" className="primary-button" onClick={() => onDownload(normalizedOptions)}>
-          Download
+        <button type="button" className="primary-button" aria-label="Download" onClick={handleDownload}>
+          Download {selectedFormatLabel}
         </button>
       </div>
     </dialog>

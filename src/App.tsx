@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { CanvasStage } from "./components/CanvasStage";
-import { ExportDialog, type ExportDialogOptions } from "./components/ExportDialog";
+import { ExportDialog } from "./components/ExportDialog";
 import { Inspector } from "./components/Inspector";
 import { LayersPanel } from "./components/LayersPanel";
 import { Toolbar, type AddLayerKind, type EditorTool } from "./components/Toolbar";
 import { TopBar } from "./components/TopBar";
 import { addLayer, applyMask, releaseMask } from "./editor/document";
+import { createJpgBlob, createPdfBlob, createSvgBlob, createWebmBlob, downloadBlob } from "./editor/exporters";
 import { createHistory, pushHistory, redo, undo } from "./editor/history";
 import { sampleDocument } from "./editor/sample";
 import { polygonPointsToPath, starPointsToPath } from "./editor/svg";
-import type { LogoDocument, NewLayerInput } from "./editor/types";
+import type { ExportOptions, LogoDocument, NewLayerInput } from "./editor/types";
 
 function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerInput {
   const centerX = document.settings.width / 2;
@@ -164,7 +165,17 @@ export default function App() {
     commitDocument(releaseMask(document, targetLayerId));
   }
 
-  function handleDownload(_options: ExportDialogOptions) {
+  async function handleDownload(options: ExportOptions) {
+    const blob =
+      options.format === "svg"
+        ? createSvgBlob(document, options)
+        : options.format === "jpg"
+          ? await createJpgBlob(document, options)
+          : options.format === "pdf"
+            ? await createPdfBlob(document, options)
+            : await createWebmBlob(document, options);
+
+    downloadBlob(blob, `${document.name}.${options.format}`);
     setExportOpen(false);
   }
 
