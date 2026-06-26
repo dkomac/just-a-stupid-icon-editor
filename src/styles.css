@@ -609,6 +609,7 @@ select:focus-visible {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
+  cursor: grab;
 }
 
 .layer-row,
@@ -620,6 +621,14 @@ select:focus-visible {
 .layer-row[data-selected="true"] {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+
+.layer-row[data-dragging="true"] {
+  opacity: 0.58;
+}
+
+.layer-row:active {
+  cursor: grabbing;
 }
 
 .layer-select {

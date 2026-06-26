@@ -53,6 +53,7 @@ test("creates a shape, edits it in the inspector, and exports svg", async ({ pag
 
   const fill = inspector.getByLabel("Fill", { exact: true });
   await expect(fill).toHaveValue("#2ec4b6");
+  await expect(inspector.getByLabel("Stroke", { exact: true })).toHaveValue("#2ec4b6");
   await fill.fill("#abc");
   await fill.press("Enter");
   await expect(fill).toHaveValue("#aabbcc");
@@ -88,6 +89,20 @@ test("creates triangle layers from the toolbar", async ({ page }) => {
   await expect(layers.getByRole("article", { name: "Layer Triangle" })).toBeVisible();
   await expect(layers.getByRole("button", { name: "Select layer Triangle" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("region", { name: "Inspector" }).getByText("path")).toBeVisible();
+});
+
+test("shows top layers first and reorders layers with drag and drop", async ({ page }) => {
+  await page.goto("/");
+
+  const layerRows = page.getByRole("region", { name: "Layers" }).getByRole("article");
+  await expect(layerRows).toHaveCount(4);
+  await expect(layerRows.nth(0)).toHaveAccessibleName("Layer Wordmark");
+  await expect(layerRows.nth(3)).toHaveAccessibleName("Layer Badge");
+
+  await page.getByRole("article", { name: "Layer Badge" }).dragTo(page.getByRole("article", { name: "Layer Wordmark" }));
+
+  await expect(layerRows.nth(0)).toHaveAccessibleName("Layer Badge");
+  await expect(layerRows.nth(1)).toHaveAccessibleName("Layer Wordmark");
 });
 
 test("uses preview mode to swap canvas backgrounds", async ({ page }) => {

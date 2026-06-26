@@ -188,6 +188,16 @@ describe("App", () => {
     expect(screen.getByRole("region", { name: "Inspector" })).toHaveTextContent("path");
   });
 
+  it("starts new shape fill and stroke with the same default color", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Rectangle" }));
+
+    expect(screen.getByLabelText("Fill")).toHaveValue("#2ec4b6");
+    expect(screen.getByLabelText("Stroke")).toHaveValue("#2ec4b6");
+  });
+
   it("exports svg with the document filename", async () => {
     const user = userEvent.setup();
     const svgBlob = new Blob(["svg"], { type: "image/svg+xml" });

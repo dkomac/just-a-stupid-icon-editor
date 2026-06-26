@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { addLayer, createDocument } from "../editor/document";
+import { sampleDocument } from "../editor/sample";
 import type { LogoDocument } from "../editor/types";
 import { ExportDialog } from "./ExportDialog";
 import { Inspector } from "./Inspector";
@@ -62,6 +63,49 @@ describe("editor panels", () => {
     fireEvent.click(screen.getByRole("button", { name: "Select layer Second" }), { shiftKey: true });
 
     expect(onSelect).toHaveBeenCalledWith(doc.layers[1].id, true);
+  });
+
+  it("shows the topmost layer first", () => {
+    render(<LayersPanel document={sampleDocument} selectedLayerIds={sampleDocument.selectedLayerIds} onSelectLayer={vi.fn()} onChangeDocument={vi.fn()} />);
+
+    expect(screen.getAllByRole("article").map((row) => row.getAttribute("aria-label"))).toEqual([
+      "Layer Wordmark",
+      "Layer Spark",
+      "Layer Orb",
+      "Layer Badge",
+    ]);
+  });
+
+  it("reorders layers by dragging them in the visible layer list", () => {
+    const first = addLayer(createDocument(), { type: "rect", name: "Bottom", x: 0, y: 0, width: 100, height: 100 });
+    const second = addLayer(first, { type: "ellipse", name: "Middle", x: 0, y: 0, width: 100, height: 100 });
+    const doc = addLayer(second, { type: "rect", name: "Top", x: 0, y: 0, width: 100, height: 100 });
+    const onChange = vi.fn();
+    const dataTransfer = {
+      value: "",
+      effectAllowed: "",
+      dropEffect: "",
+      setData(_format: string, value: string) {
+        this.value = value;
+      },
+      getData() {
+        return this.value;
+      },
+    };
+
+    render(<LayersPanel document={doc} selectedLayerIds={[doc.layers[2].id]} onSelectLayer={vi.fn()} onChangeDocument={onChange} />);
+    fireEvent.dragStart(screen.getByRole("article", { name: "Layer Bottom" }), { dataTransfer });
+    fireEvent.drop(screen.getByRole("article", { name: "Layer Top" }), { dataTransfer });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layers: [
+          expect.objectContaining({ name: "Middle" }),
+          expect.objectContaining({ name: "Top" }),
+          expect.objectContaining({ name: "Bottom" }),
+        ],
+      }),
+    );
   });
 
   it("uses pressed state only for toggle buttons", () => {

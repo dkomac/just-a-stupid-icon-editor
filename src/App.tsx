@@ -26,13 +26,14 @@ const previewBackgroundOptions: PreviewBackgroundOption[] = [
 function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerInput {
   const centerX = document.settings.width / 2;
   const centerY = document.settings.height / 2;
+  const defaultColor = "#2ec4b6";
   const base = {
     x: Math.round(centerX - 64),
     y: Math.round(centerY - 64),
     width: 128,
     height: 128,
-    fill: "#2ec4b6",
-    stroke: "#14213d",
+    fill: defaultColor,
+    stroke: defaultColor,
     strokeWidth: 4,
   };
 
@@ -54,7 +55,7 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
       fontFamily: "Inter",
       fontSize: 48,
       fontWeight: 800,
-      fill: "#14213d",
+      fill: defaultColor,
       strokeWidth: 0,
     };
   }
@@ -83,7 +84,6 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
       type: "path",
       name: "Star",
       path: starPointsToPath(50, 50, 48, 22, 5),
-      fill: "#ffb703",
     };
   }
 
@@ -92,7 +92,7 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
     type: "path",
     name: "Line",
     height: 24,
-    fill: "transparent",
+    fill: defaultColor,
     strokeWidth: 8,
     path: "M 0 50 L 100 50",
   };

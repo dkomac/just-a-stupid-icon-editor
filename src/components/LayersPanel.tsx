@@ -72,6 +72,30 @@ function LayerRenameField({
 }
 
 export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChangeDocument }: LayersPanelProps) {
+  const [draggingLayerId, setDraggingLayerId] = useState<string>();
+  const visibleLayers = [...document.layers].reverse();
+
+  function reorderLayerBefore(draggedLayerId: string, targetLayerId: string): LogoDocument {
+    if (draggedLayerId === targetLayerId) {
+      return document;
+    }
+
+    const nextVisibleLayers = visibleLayers.filter((layer) => layer.id !== draggedLayerId);
+    const draggedLayer = document.layers.find((layer) => layer.id === draggedLayerId);
+    const targetVisibleIndex = nextVisibleLayers.findIndex((layer) => layer.id === targetLayerId);
+
+    if (!draggedLayer || targetVisibleIndex === -1) {
+      return document;
+    }
+
+    nextVisibleLayers.splice(targetVisibleIndex, 0, draggedLayer);
+
+    return {
+      ...document,
+      layers: [...nextVisibleLayers].reverse(),
+    };
+  }
+
   return (
     <aside className="side-panel layers-panel" aria-label="Layers" role="region">
       <div className="panel-heading">
@@ -94,12 +118,39 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
         {document.layers.length === 0 ? (
           <p className="empty-note">Add a shape to start building your logo.</p>
         ) : (
-          document.layers.map((layer, index) => {
+          visibleLayers.map((layer) => {
             const selected = selectedLayerIds.includes(layer.id);
             const maskStatus = layer.maskedBy ? "Masked" : layer.maskFor?.length ? "Mask" : "";
+            const stackIndex = document.layers.findIndex((candidate) => candidate.id === layer.id);
 
             return (
-              <article key={layer.id} className="layer-row" data-selected={selected} aria-label={`Layer ${layer.name}`}>
+              <article
+                key={layer.id}
+                className="layer-row"
+                data-selected={selected}
+                data-dragging={draggingLayerId === layer.id}
+                draggable
+                aria-label={`Layer ${layer.name}`}
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("text/plain", layer.id);
+                  setDraggingLayerId(layer.id);
+                }}
+                onDragEnd={() => setDraggingLayerId(undefined)}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const draggedLayerId = event.dataTransfer.getData("text/plain") || draggingLayerId;
+                  setDraggingLayerId(undefined);
+
+                  if (draggedLayerId && draggedLayerId !== layer.id) {
+                    onChangeDocument(reorderLayerBefore(draggedLayerId, layer.id));
+                  }
+                }}
+              >
                 <button
                   type="button"
                   className="layer-select"
@@ -137,14 +188,14 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
                   <IconButton
                     label={`Move ${layer.name} up`}
                     icon={<ArrowUp size={15} />}
-                    disabled={index === document.layers.length - 1}
-                    onClick={() => onChangeDocument(moveLayer(document, layer.id, index + 1))}
+                    disabled={stackIndex === document.layers.length - 1}
+                    onClick={() => onChangeDocument(moveLayer(document, layer.id, stackIndex + 1))}
                   />
                   <IconButton
                     label={`Move ${layer.name} down`}
                     icon={<ArrowDown size={15} />}
-                    disabled={index === 0}
-                    onClick={() => onChangeDocument(moveLayer(document, layer.id, index - 1))}
+                    disabled={stackIndex === 0}
+                    onClick={() => onChangeDocument(moveLayer(document, layer.id, stackIndex - 1))}
                   />
                   <IconButton
                     label={`Delete ${layer.name}`}
