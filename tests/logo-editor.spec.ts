@@ -94,6 +94,9 @@ test("uses preview mode to swap canvas backgrounds", async ({ page }) => {
 
   await page.getByRole("button", { name: "Transparent background" }).click();
   await expect(page.getByTestId("canvas-background")).toHaveAttribute("fill", "transparent");
+
+  await page.getByLabel("Custom preview background").fill("#ff3366");
+  await expect(page.getByTestId("canvas-background")).toHaveAttribute("fill", "#ff3366");
 });
 
 test("keeps side panels usable on small screens", async ({ page }) => {

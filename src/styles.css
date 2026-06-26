@@ -219,6 +219,7 @@ select:focus-visible {
 .background-swatch {
   width: 24px;
   height: 24px;
+  flex: 0 0 auto;
   border: 1px solid oklch(0.7 0.015 255);
   border-radius: 7px;
   background: var(--preview-background);
@@ -239,6 +240,31 @@ select:focus-visible {
 .background-swatch[aria-pressed="true"] {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px oklch(0.58 0.18 245 / 0.22);
+}
+
+.preview-color-picker {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid oklch(0.7 0.015 255);
+  border-radius: 7px;
+  background: white;
+  cursor: pointer;
+}
+
+.preview-color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.preview-color-picker::-webkit-color-swatch {
+  border: 0;
+  border-radius: 4px;
+}
+
+.preview-color-picker::-moz-color-swatch {
+  border: 0;
+  border-radius: 4px;
 }
 
 .canvas-wrap {

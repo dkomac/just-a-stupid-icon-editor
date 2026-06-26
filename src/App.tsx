@@ -16,6 +16,10 @@ const previewBackgroundOptions: PreviewBackgroundOption[] = [
   { label: "Soft gray", value: "#f4f7fb" },
   { label: "Dark", value: "#111827" },
   { label: "Blue", value: "#dbeafe" },
+  { label: "Rose", value: "#ffe4e6" },
+  { label: "Amber", value: "#fef3c7" },
+  { label: "Mint", value: "#ccfbf1" },
+  { label: "Lavender", value: "#ede9fe" },
   { label: "Transparent", value: "transparent" },
 ];
 

@@ -27,6 +27,10 @@ interface TopBarProps {
   onOpenExport: () => void;
 }
 
+function colorPickerValue(value: string): string {
+  return /^#[0-9a-f]{6}$/i.test(value) ? value : "#ffffff";
+}
+
 export function TopBar({
   documentName,
   canUndo,
@@ -86,6 +90,14 @@ export function TopBar({
                 onClick={() => onChangePreviewBackground(background.value)}
               />
             ))}
+            <input
+              type="color"
+              className="preview-color-picker"
+              aria-label="Custom preview background"
+              title="Custom preview background"
+              value={colorPickerValue(previewBackground)}
+              onChange={(event) => onChangePreviewBackground(event.currentTarget.value)}
+            />
           </div>
         ) : null}
         <button type="button" className="primary-button" title="Export" onClick={onOpenExport}>

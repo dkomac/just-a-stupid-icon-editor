@@ -72,6 +72,11 @@ describe("App", () => {
     expect(screen.getByTestId("canvas-background")).toHaveAttribute("fill", "#111827");
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
 
+    fireEvent.input(screen.getByLabelText("Custom preview background"), { target: { value: "#ff3366" } });
+
+    expect(screen.getByTestId("canvas-background")).toHaveAttribute("fill", "#ff3366");
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+
     await user.click(screen.getByRole("button", { name: "Preview" }));
 
     expect(screen.getByRole("region", { name: "Inspector" })).toBeInTheDocument();
