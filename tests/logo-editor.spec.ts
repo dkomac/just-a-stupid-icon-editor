@@ -105,6 +105,33 @@ test("shows top layers first and reorders layers with drag and drop", async ({ p
   await expect(layerRows.nth(1)).toHaveAccessibleName("Layer Wordmark");
 });
 
+test("duplicates layers beside the source and scrolls long layer lists", async ({ page }) => {
+  await page.setViewportSize({ width: 1227, height: 720 });
+  await page.goto("/");
+
+  const layers = page.getByRole("region", { name: "Layers" });
+  const layerRows = layers.getByRole("article");
+
+  await layers.getByRole("button", { name: "Duplicate Badge" }).click();
+  await expect(layerRows.nth(2)).toHaveAccessibleName("Layer Orb");
+  await expect(layerRows.nth(3)).toHaveAccessibleName("Layer Badge - 2");
+  await expect(layerRows.nth(4)).toHaveAccessibleName("Layer Badge");
+
+  const toolbar = page.getByRole("navigation", { name: "Shape tools" });
+  for (let i = 0; i < 10; i += 1) {
+    await toolbar.getByRole("button", { name: "Rectangle", exact: true }).click();
+  }
+
+  const scrollState = await page.locator(".layer-list").evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    overflowY: window.getComputedStyle(element).overflowY,
+  }));
+
+  expect(scrollState.scrollHeight).toBeGreaterThan(scrollState.clientHeight);
+  expect(scrollState.overflowY).toBe("auto");
+});
+
 test("uses preview mode to swap canvas backgrounds", async ({ page }) => {
   await page.goto("/");
 

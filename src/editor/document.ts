@@ -67,6 +67,22 @@ function updateLayer(document: LogoDocument, layerId: string, update: (layer: Lo
   };
 }
 
+function baseDuplicateName(name: string): string {
+  return name.replace(/\s-\s\d+$/, "");
+}
+
+function nextDuplicateName(document: LogoDocument, sourceName: string): string {
+  const baseName = baseDuplicateName(sourceName);
+  const existingNames = new Set(document.layers.map((layer) => layer.name));
+  let suffix = 2;
+
+  while (existingNames.has(`${baseName} - ${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${baseName} - ${suffix}`;
+}
+
 export function createDocument(): LogoDocument {
   return {
     id: createDocumentId(),
@@ -111,7 +127,8 @@ export function toggleLayerLocked(document: LogoDocument, layerId: string): Logo
 }
 
 export function duplicateLayer(document: LogoDocument, layerId: string): LogoDocument {
-  const source = document.layers.find((layer) => layer.id === layerId);
+  const sourceIndex = document.layers.findIndex((layer) => layer.id === layerId);
+  const source = document.layers[sourceIndex];
 
   if (!source) {
     return document;
@@ -120,14 +137,18 @@ export function duplicateLayer(document: LogoDocument, layerId: string): LogoDoc
   const duplicate = {
     ...source,
     id: createLayerId(),
-    name: `${source.name} copy`,
+    name: nextDuplicateName(document, source.name),
+    x: source.x + document.settings.gridSize,
+    y: source.y + document.settings.gridSize,
     maskedBy: undefined,
     maskFor: undefined,
   } as LogoLayer;
+  const layers = [...document.layers];
+  layers.splice(sourceIndex + 1, 0, duplicate);
 
   return {
     ...document,
-    layers: [...document.layers, duplicate],
+    layers,
     selectedLayerIds: [duplicate.id],
   };
 }

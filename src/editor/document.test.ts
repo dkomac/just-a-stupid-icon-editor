@@ -54,9 +54,21 @@ describe("document model", () => {
     const deleted = deleteLayer(moved, moved.layers[1].id);
 
     expect(hidden.layers[0].visible).toBe(false);
-    expect(duplicated.layers[2].name).toBe("Dot copy");
-    expect(moved.layers[0].name).toBe("Dot copy");
-    expect(deleted.layers.map((layer) => layer.name)).toEqual(["Dot copy", "Dot"]);
+    expect(duplicated.layers.map((layer) => layer.name)).toEqual(["Base", "Dot", "Dot - 2"]);
+    expect(moved.layers[0].name).toBe("Dot - 2");
+    expect(deleted.layers.map((layer) => layer.name)).toEqual(["Dot - 2", "Dot"]);
+  });
+
+  it("duplicates layers beside the source with the next numeric suffix", () => {
+    const first = addLayer(createDocument(), { type: "rect", name: "Base", x: 0, y: 0, width: 100, height: 100 });
+    const second = addLayer(first, { type: "ellipse", name: "Dot", x: 20, y: 20, width: 40, height: 40 });
+    const firstDuplicate = duplicateLayer(second, second.layers[0].id);
+    const secondDuplicate = duplicateLayer(firstDuplicate, second.layers[0].id);
+
+    expect(firstDuplicate.layers.map((layer) => layer.name)).toEqual(["Base", "Base - 2", "Dot"]);
+    expect(firstDuplicate.layers[1]).toMatchObject({ x: 8, y: 8 });
+    expect(secondDuplicate.layers.map((layer) => layer.name)).toEqual(["Base", "Base - 3", "Base - 2", "Dot"]);
+    expect(secondDuplicate.selectedLayerIds).toEqual([secondDuplicate.layers[1].id]);
   });
 
   it("clears every layer and selection", () => {

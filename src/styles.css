@@ -51,6 +51,7 @@ select:focus-visible {
 }
 
 .app-shell {
+  height: 100vh;
   min-height: 100vh;
   display: grid;
   grid-template-rows: 56px 1fr;
@@ -429,6 +430,10 @@ select:focus-visible {
 
 .side-panel[aria-label="Layers"] {
   grid-area: layers;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .side-panel[aria-label="Inspector"] {
@@ -599,6 +604,13 @@ select:focus-visible {
 
 .layer-list {
   display: grid;
+  flex: 1;
+  align-content: start;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
   gap: 8px;
 }
 
