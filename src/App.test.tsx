@@ -56,6 +56,28 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Redo" })).toBeInTheDocument();
   });
 
+  it("previews the logo on alternate backgrounds without changing the document", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Preview" }));
+
+    expect(screen.queryByRole("navigation", { name: "Shape tools" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Layers" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Inspector" })).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Preview backgrounds" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Dark background" }));
+
+    expect(screen.getByTestId("canvas-background")).toHaveAttribute("fill", "#111827");
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Preview" }));
+
+    expect(screen.getByRole("region", { name: "Inspector" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Background")).toHaveValue("#ffffff");
+  });
+
   it("groups document name typing into a single undo step", async () => {
     const user = userEvent.setup();
     render(<App />);

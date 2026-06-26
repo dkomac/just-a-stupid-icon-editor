@@ -1,5 +1,11 @@
-import { Download, Grid2X2, Magnet, Redo2, Undo2 } from "lucide-react";
+import type { CSSProperties } from "react";
+import { Download, Eye, Grid2X2, Magnet, Redo2, Undo2 } from "lucide-react";
 import { IconButton, TextField } from "./ui";
+
+export interface PreviewBackgroundOption {
+  label: string;
+  value: string;
+}
 
 interface TopBarProps {
   documentName: string;
@@ -8,11 +14,16 @@ interface TopBarProps {
   zoom: number;
   showGrid: boolean;
   snapToGrid: boolean;
+  previewMode: boolean;
+  previewBackground: string;
+  previewBackgrounds: PreviewBackgroundOption[];
   onRenameDocument: (name: string) => void;
   onUndo: () => void;
   onRedo: () => void;
   onToggleGrid: () => void;
   onToggleSnap: () => void;
+  onTogglePreview: () => void;
+  onChangePreviewBackground: (background: string) => void;
   onOpenExport: () => void;
 }
 
@@ -23,11 +34,16 @@ export function TopBar({
   zoom,
   showGrid,
   snapToGrid,
+  previewMode,
+  previewBackground,
+  previewBackgrounds,
   onRenameDocument,
   onUndo,
   onRedo,
   onToggleGrid,
   onToggleSnap,
+  onTogglePreview,
+  onChangePreviewBackground,
   onOpenExport,
 }: TopBarProps) {
   return (
@@ -54,6 +70,24 @@ export function TopBar({
           pressed={snapToGrid}
           onClick={onToggleSnap}
         />
+        <IconButton label="Preview" icon={<Eye size={17} strokeWidth={2} />} pressed={previewMode} onClick={onTogglePreview} />
+        {previewMode ? (
+          <div className="preview-backgrounds" role="group" aria-label="Preview backgrounds">
+            {previewBackgrounds.map((background) => (
+              <button
+                key={`${background.label}-${background.value}`}
+                type="button"
+                className="background-swatch"
+                style={{ "--preview-background": background.value } as CSSProperties}
+                data-transparent={background.value === "transparent"}
+                aria-label={`${background.label} background`}
+                aria-pressed={previewBackground === background.value}
+                title={`${background.label} background`}
+                onClick={() => onChangePreviewBackground(background.value)}
+              />
+            ))}
+          </div>
+        ) : null}
         <button type="button" className="primary-button" title="Export" onClick={onOpenExport}>
           <Download size={16} strokeWidth={2} aria-hidden="true" />
           Export

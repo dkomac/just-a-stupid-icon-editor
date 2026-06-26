@@ -4,12 +4,20 @@ import { ExportDialog } from "./components/ExportDialog";
 import { Inspector } from "./components/Inspector";
 import { LayersPanel } from "./components/LayersPanel";
 import { Toolbar, type AddLayerKind, type EditorTool } from "./components/Toolbar";
-import { TopBar } from "./components/TopBar";
+import { TopBar, type PreviewBackgroundOption } from "./components/TopBar";
 import { addLayer, applyMask, releaseMask } from "./editor/document";
 import { createHistory, pushHistory, redo, undo } from "./editor/history";
 import { sampleDocument } from "./editor/sample";
 import { polygonPointsToPath, starPointsToPath } from "./editor/svg";
 import type { ExportOptions, LogoDocument, NewLayerInput } from "./editor/types";
+
+const previewBackgroundOptions: PreviewBackgroundOption[] = [
+  { label: "Light", value: "#ffffff" },
+  { label: "Soft gray", value: "#f4f7fb" },
+  { label: "Dark", value: "#111827" },
+  { label: "Blue", value: "#dbeafe" },
+  { label: "Transparent", value: "transparent" },
+];
 
 function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerInput {
   const centerX = document.settings.width / 2;
@@ -85,6 +93,8 @@ export default function App() {
   const [showGrid, setShowGrid] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(sampleDocument.settings.snapToGrid);
   const [selectedMaskLayerId, setSelectedMaskLayerId] = useState<string>();
+  const [previewMode, setPreviewMode] = useState(false);
+  const [previewBackground, setPreviewBackground] = useState(sampleDocument.settings.background);
   const [zoom] = useState(1);
   const document = history.present;
   const selectedLayerId = selectedLayerIds[0];
@@ -161,6 +171,14 @@ export default function App() {
     });
   }
 
+  function handleTogglePreview() {
+    if (!previewMode) {
+      setPreviewBackground(document.settings.background);
+    }
+
+    setPreviewMode((current) => !current);
+  }
+
   function handleUseSelectedLayerAsMask(layerId: string) {
     setSelectedMaskLayerId(layerId);
   }
@@ -193,7 +211,7 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-preview={previewMode}>
       <TopBar
         documentName={document.name}
         canUndo={history.past.length > 0}
@@ -201,41 +219,52 @@ export default function App() {
         zoom={zoom}
         showGrid={showGrid}
         snapToGrid={snapToGrid}
+        previewMode={previewMode}
+        previewBackground={previewBackground}
+        previewBackgrounds={previewBackgroundOptions}
         onRenameDocument={handleRenameDocument}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onToggleGrid={() => setShowGrid((current) => !current)}
         onToggleSnap={handleToggleSnap}
+        onTogglePreview={handleTogglePreview}
+        onChangePreviewBackground={setPreviewBackground}
         onOpenExport={() => setExportOpen(true)}
       />
-      <section className="editor-grid">
-        <Toolbar activeTool={activeTool} onSelectTool={setActiveTool} onAddLayer={handleAddLayer} />
+      <section className="editor-grid" data-preview={previewMode}>
+        {previewMode ? null : <Toolbar activeTool={activeTool} onSelectTool={setActiveTool} onAddLayer={handleAddLayer} />}
         <section className="canvas-wrap" aria-label="Logo canvas" role="region">
           <CanvasStage
             document={document}
-            selectedLayerIds={selectedLayerIds}
-            showGrid={showGrid}
+            selectedLayerIds={previewMode ? [] : selectedLayerIds}
+            showGrid={previewMode ? false : showGrid}
             snapToGrid={snapToGrid}
+            readOnly={previewMode}
+            previewBackground={previewMode ? previewBackground : undefined}
             onSelectLayer={handleSelectLayer}
             onChangeDocument={commitDocument}
           />
         </section>
-        <LayersPanel
-          document={document}
-          selectedLayerIds={selectedLayerIds}
-          onSelectLayer={handleSelectLayer}
-          onChangeDocument={commitDocument}
-        />
-        <Inspector
-          document={document}
-          selectedLayerId={selectedLayerId}
-          selectedLayerIds={selectedLayerIds}
-          maskLayerId={selectedMaskLayerId}
-          onUseSelectedLayerAsMask={handleUseSelectedLayerAsMask}
-          onApplySelectedMaskToSelectedTarget={handleApplySelectedMask}
-          onReleaseMaskFromSelectedTarget={handleReleaseSelectedMask}
-          onChangeDocument={commitDocument}
-        />
+        {previewMode ? null : (
+          <>
+            <LayersPanel
+              document={document}
+              selectedLayerIds={selectedLayerIds}
+              onSelectLayer={handleSelectLayer}
+              onChangeDocument={commitDocument}
+            />
+            <Inspector
+              document={document}
+              selectedLayerId={selectedLayerId}
+              selectedLayerIds={selectedLayerIds}
+              maskLayerId={selectedMaskLayerId}
+              onUseSelectedLayerAsMask={handleUseSelectedLayerAsMask}
+              onApplySelectedMaskToSelectedTarget={handleApplySelectedMask}
+              onReleaseMaskFromSelectedTarget={handleReleaseSelectedMask}
+              onChangeDocument={commitDocument}
+            />
+          </>
+        )}
       </section>
       <ExportDialog
         open={exportOpen}

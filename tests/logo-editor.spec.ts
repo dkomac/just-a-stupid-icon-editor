@@ -78,6 +78,24 @@ test("creates a shape, edits it in the inspector, and exports svg", async ({ pag
   expect(svg).toContain('fill="#aabbcc"');
 });
 
+test("uses preview mode to swap canvas backgrounds", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Preview" }).click();
+
+  await expect(page.getByRole("navigation", { name: "Shape tools" })).toBeHidden();
+  await expect(page.getByRole("region", { name: "Layers" })).toBeHidden();
+  await expect(page.getByRole("region", { name: "Inspector" })).toBeHidden();
+  await expect(page.getByRole("group", { name: "Preview backgrounds" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Dark background" }).click();
+  await expect(page.getByTestId("canvas-background")).toHaveAttribute("fill", "#111827");
+  await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Transparent background" }).click();
+  await expect(page.getByTestId("canvas-background")).toHaveAttribute("fill", "transparent");
+});
+
 test("keeps side panels usable on small screens", async ({ page }) => {
   await page.setViewportSize({ width: 760, height: 720 });
   await page.goto("/");

@@ -76,11 +76,16 @@ describe("editor panels", () => {
           zoom={1}
           showGrid
           snapToGrid
+          previewMode={false}
+          previewBackground="#ffffff"
+          previewBackgrounds={[{ label: "Light", value: "#ffffff" }]}
           onRenameDocument={vi.fn()}
           onUndo={vi.fn()}
           onRedo={vi.fn()}
           onToggleGrid={vi.fn()}
           onToggleSnap={vi.fn()}
+          onTogglePreview={vi.fn()}
+          onChangePreviewBackground={vi.fn()}
           onOpenExport={vi.fn()}
         />
         <LayersPanel document={doc} selectedLayerIds={[doc.layers[0].id]} onSelectLayer={vi.fn()} onChangeDocument={vi.fn()} />

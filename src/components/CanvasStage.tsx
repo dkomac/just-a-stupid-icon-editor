@@ -7,6 +7,8 @@ interface CanvasStageProps {
   selectedLayerIds: string[];
   showGrid: boolean;
   snapToGrid: boolean;
+  readOnly?: boolean;
+  previewBackground?: string;
   onSelectLayer: (layerId: string) => void;
   onChangeDocument: (document: LogoDocument) => void;
 }
@@ -158,6 +160,8 @@ export function CanvasStage({
   selectedLayerIds,
   showGrid,
   snapToGrid,
+  readOnly = false,
+  previewBackground,
   onSelectLayer,
   onChangeDocument,
 }: CanvasStageProps) {
@@ -171,11 +175,22 @@ export function CanvasStage({
   const [previewDocument, setPreviewDocument] = useState<LogoDocument>();
   const [guides, setGuides] = useState<CenterGuides>({});
   const activeDocument = previewDocument ?? document;
-  const selectedLayer = activeDocument.layers.find((layer) => selectedLayerIds.includes(layer.id) && layer.visible);
+  const renderDocument =
+    previewBackground === undefined
+      ? activeDocument
+      : {
+          ...activeDocument,
+          settings: {
+            ...activeDocument.settings,
+            background: previewBackground,
+          },
+        };
+  const activeLayerIds = readOnly ? [] : selectedLayerIds;
+  const selectedLayer = renderDocument.layers.find((layer) => activeLayerIds.includes(layer.id) && layer.visible);
   const gridId = `canvas-grid-${activeDocument.id}`;
-  const maskLayerIds = new Set(activeDocument.layers.filter((layer) => (layer.maskFor?.length ?? 0) > 0).map((layer) => layer.id));
-  const visibleMaskLayers = activeDocument.layers.filter((layer) => layer.visible && maskLayerIds.has(layer.id));
-  const clipPathIdsByLayerId = new Map(visibleMaskLayers.map((layer) => [layer.id, clipPathId(activeDocument.id, layer.id)]));
+  const maskLayerIds = new Set(renderDocument.layers.filter((layer) => (layer.maskFor?.length ?? 0) > 0).map((layer) => layer.id));
+  const visibleMaskLayers = renderDocument.layers.filter((layer) => layer.visible && maskLayerIds.has(layer.id));
+  const clipPathIdsByLayerId = new Map(visibleMaskLayers.map((layer) => [layer.id, clipPathId(renderDocument.id, layer.id)]));
 
   useEffect(() => {
     return () => {
@@ -375,6 +390,10 @@ export function CanvasStage({
   }
 
   function handleLayerPointerDown(event: React.PointerEvent, layer: LogoLayer) {
+    if (readOnly) {
+      return;
+    }
+
     onSelectLayer(layer.id);
 
     if (layer.locked) {
@@ -392,6 +411,10 @@ export function CanvasStage({
   }
 
   function handleLayerKeyDown(event: React.KeyboardEvent<SVGGElement>, layer: LogoLayer) {
+    if (readOnly) {
+      return;
+    }
+
     if (event.key !== "Enter" && event.key !== " ") {
       return;
     }
@@ -532,20 +555,20 @@ export function CanvasStage({
   }
 
   return (
-    <div className="canvas-stage" data-grid={showGrid}>
+    <div className="canvas-stage" data-grid={showGrid} data-preview={readOnly} data-preview-background={previewBackground}>
       <svg
         ref={svgRef}
         className="canvas-svg"
-        width={activeDocument.settings.width}
-        height={activeDocument.settings.height}
-        viewBox={`0 0 ${activeDocument.settings.width} ${activeDocument.settings.height}`}
+        width={renderDocument.settings.width}
+        height={renderDocument.settings.height}
+        viewBox={`0 0 ${renderDocument.settings.width} ${renderDocument.settings.height}`}
         role="img"
-        aria-label={activeDocument.name}
+        aria-label={renderDocument.name}
       >
         <defs>
           {showGrid ? (
-            <pattern id={gridId} width={activeDocument.settings.gridSize} height={activeDocument.settings.gridSize} patternUnits="userSpaceOnUse">
-              <path d={`M ${activeDocument.settings.gridSize} 0 L 0 0 0 ${activeDocument.settings.gridSize}`} className="canvas-grid-line" />
+            <pattern id={gridId} width={renderDocument.settings.gridSize} height={renderDocument.settings.gridSize} patternUnits="userSpaceOnUse">
+              <path d={`M ${renderDocument.settings.gridSize} 0 L 0 0 0 ${renderDocument.settings.gridSize}`} className="canvas-grid-line" />
             </pattern>
           ) : null}
           {visibleMaskLayers.map((layer) => (
@@ -554,9 +577,9 @@ export function CanvasStage({
             </clipPath>
           ))}
         </defs>
-        <rect width="100%" height="100%" fill={activeDocument.settings.background} />
+        <rect data-testid="canvas-background" width="100%" height="100%" fill={renderDocument.settings.background} />
         {showGrid ? <rect width="100%" height="100%" fill={`url(#${gridId})`} className="canvas-grid-fill" /> : null}
-        {activeDocument.layers
+        {renderDocument.layers
           .filter((layer) => layer.visible && !maskLayerIds.has(layer.id))
           .map((layer) => {
             const clipId = layer.maskedBy ? clipPathIdsByLayerId.get(layer.maskedBy) : undefined;
@@ -566,10 +589,10 @@ export function CanvasStage({
                 key={layer.id}
                 data-testid={`canvas-layer-${layer.id}`}
                 className="canvas-layer"
-                data-selected={selectedLayerIds.includes(layer.id)}
+                data-selected={activeLayerIds.includes(layer.id)}
                 data-locked={layer.locked}
-                role="button"
-                tabIndex={0}
+                role={readOnly ? undefined : "button"}
+                tabIndex={readOnly ? undefined : 0}
                 aria-label={`Canvas layer ${layer.name}`}
                 opacity={layer.opacity}
                 transform={layerTransform(layer)}
@@ -582,8 +605,8 @@ export function CanvasStage({
               </g>
             );
           })}
-        {guides.vertical !== undefined ? <line className="canvas-guide" x1={guides.vertical} x2={guides.vertical} y1={0} y2={activeDocument.settings.height} /> : null}
-        {guides.horizontal !== undefined ? <line className="canvas-guide" x1={0} x2={activeDocument.settings.width} y1={guides.horizontal} y2={guides.horizontal} /> : null}
+        {guides.vertical !== undefined ? <line className="canvas-guide" x1={guides.vertical} x2={guides.vertical} y1={0} y2={renderDocument.settings.height} /> : null}
+        {guides.horizontal !== undefined ? <line className="canvas-guide" x1={0} x2={renderDocument.settings.width} y1={guides.horizontal} y2={guides.horizontal} /> : null}
         {selectedLayer ? (
           <g className="canvas-selection" transform={layerTransform(selectedLayer)}>
             <rect
