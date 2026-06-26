@@ -432,24 +432,43 @@ select:focus-visible {
 }
 
 .color-input {
-  position: relative;
-  display: block;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
 }
 
-.color-input input {
-  padding-left: 35px;
+.color-input .color-text-input {
+  padding: 0 9px;
 }
 
-.color-swatch {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  width: 18px;
-  height: 18px;
+.color-picker {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 3px;
   border: 1px solid oklch(0.72 0.015 255);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-picker::-webkit-color-swatch {
+  border: 0;
   border-radius: 5px;
-  transform: translateY(-50%);
-  z-index: 1;
+}
+
+.color-picker::-moz-color-swatch {
+  border: 0;
+  border-radius: 5px;
+}
+
+.color-picker:disabled {
+  background: var(--surface-2);
+  cursor: not-allowed;
 }
 
 .check-field {

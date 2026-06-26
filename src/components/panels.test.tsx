@@ -142,6 +142,21 @@ describe("editor panels", () => {
     );
   });
 
+  it("changes colors from the native color picker", () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
+    const onChange = vi.fn();
+    render(<Inspector document={doc} selectedLayerId={doc.layers[0].id} onChangeDocument={onChange} />);
+
+    fireEvent.change(screen.getByLabelText("Fill picker"), { target: { value: "#123456" } });
+
+    expect(screen.getByLabelText("Fill")).toHaveValue("#123456");
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layers: [expect.objectContaining({ fill: "#123456" })],
+      }),
+    );
+  });
+
   it("disables locked layer inspector inputs", () => {
     const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
     const lockedDoc: LogoDocument = {

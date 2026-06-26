@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 interface IconButtonProps {
   label: string;
@@ -275,8 +275,10 @@ export function normalizeHexColor(value: string): string | undefined {
 }
 
 export function ColorField({ label, value, disabled = false, commitOn = "blur", onChange }: ColorFieldProps) {
+  const inputId = useId();
   const [textValue, setTextValue] = useState(value);
   const skipNextBlurCommit = useRef(false);
+  const pickerValue = normalizeHexColor(value) ?? "#000000";
 
   useEffect(() => {
     setTextValue(value);
@@ -298,11 +300,28 @@ export function ColorField({ label, value, disabled = false, commitOn = "blur", 
   }
 
   return (
-    <label className="field color-field">
-      <span className="field-label">{label}</span>
+    <div className="field color-field">
+      <label className="field-label" htmlFor={inputId}>
+        {label}
+      </label>
       <span className="color-input">
-        <span className="color-swatch" style={{ background: normalizeHexColor(value) ?? value }} aria-hidden="true" />
         <input
+          className="color-picker"
+          type="color"
+          value={pickerValue}
+          disabled={disabled}
+          aria-label={`${label} picker`}
+          title={`${label} picker`}
+          onChange={(event) => {
+            const nextValue = event.target.value.toLowerCase();
+
+            setTextValue(nextValue);
+            onChange(nextValue);
+          }}
+        />
+        <input
+          id={inputId}
+          className="color-text-input"
           type="text"
           value={textValue}
           disabled={disabled}
@@ -338,7 +357,7 @@ export function ColorField({ label, value, disabled = false, commitOn = "blur", 
           }}
         />
       </span>
-    </label>
+    </div>
   );
 }
 
