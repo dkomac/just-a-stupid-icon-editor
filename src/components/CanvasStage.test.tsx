@@ -91,6 +91,21 @@ describe("CanvasStage", () => {
     );
   });
 
+  it("resizes selected layers with keyboard-operated handles", () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 20, y: 30, width: 120, height: 80 });
+    const onChangeDocument = vi.fn();
+
+    render(<CanvasStage document={doc} selectedLayerIds={[doc.layers[0].id]} showGrid snapToGrid onSelectLayer={vi.fn()} onChangeDocument={onChangeDocument} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Resize se" }), { key: "ArrowRight" });
+
+    expect(onChangeDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedLayerIds: [doc.layers[0].id],
+        layers: [expect.objectContaining({ id: doc.layers[0].id, width: 128, height: 80 })],
+      }),
+    );
+  });
+
   it("does not snap resized layers below the minimum size", () => {
     const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 20, y: 30, width: 10, height: 10 });
     const onChangeDocument = vi.fn();
@@ -122,6 +137,21 @@ describe("CanvasStage", () => {
     expect(onChangeDocument).toHaveBeenLastCalledWith(
       expect.objectContaining({
         layers: [expect.objectContaining({ id: doc.layers[0].id, rotation: 90 })],
+      }),
+    );
+  });
+
+  it("rotates selected layers with the keyboard-operated rotate handle", () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 20, y: 30, width: 120, height: 80 });
+    const onChangeDocument = vi.fn();
+
+    render(<CanvasStage document={doc} selectedLayerIds={[doc.layers[0].id]} showGrid snapToGrid onSelectLayer={vi.fn()} onChangeDocument={onChangeDocument} />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Rotate layer" }), { key: "ArrowRight", shiftKey: true });
+
+    expect(onChangeDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedLayerIds: [doc.layers[0].id],
+        layers: [expect.objectContaining({ id: doc.layers[0].id, rotation: 15 })],
       }),
     );
   });

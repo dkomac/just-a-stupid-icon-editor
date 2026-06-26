@@ -13,6 +13,7 @@ interface CanvasStageProps {
 
 type ResizeHandle = "nw" | "ne" | "se" | "sw";
 type InteractionKind = "move" | "resize" | "rotate";
+type ArrowKey = "ArrowUp" | "ArrowRight" | "ArrowDown" | "ArrowLeft";
 
 interface Point {
   x: number;
@@ -35,6 +36,12 @@ interface InteractionState {
 
 const GUIDE_THRESHOLD = 6;
 const MIN_LAYER_SIZE = 8;
+const KEYBOARD_ROTATION_STEP = 1;
+const KEYBOARD_ROTATION_LARGE_STEP = 15;
+
+function isArrowKey(key: string): key is ArrowKey {
+  return key === "ArrowUp" || key === "ArrowRight" || key === "ArrowDown" || key === "ArrowLeft";
+}
 
 function snapGeometryValue(value: number, gridSize: number, enabled: boolean): number {
   return enabled ? snapValue(value, gridSize) : value;
@@ -402,6 +409,84 @@ export function CanvasStage({
     });
   }
 
+  function commitKeyboardResize(event: React.KeyboardEvent, handle: ResizeHandle) {
+    if (!selectedLayer || selectedLayer.locked || !isArrowKey(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const baseStep = snapToGrid ? activeDocument.settings.gridSize : 1;
+    const step = event.shiftKey ? baseStep * 4 : baseStep;
+    let x = selectedLayer.x;
+    let y = selectedLayer.y;
+    let width = selectedLayer.width;
+    let height = selectedLayer.height;
+
+    if (event.key === "ArrowRight") {
+      if (handle.includes("e")) {
+        width += step;
+      }
+
+      if (handle.includes("w")) {
+        width = Math.max(MIN_LAYER_SIZE, width - step);
+        x = selectedLayer.x + selectedLayer.width - width;
+      }
+    }
+
+    if (event.key === "ArrowLeft") {
+      if (handle.includes("e")) {
+        width = Math.max(MIN_LAYER_SIZE, width - step);
+      }
+
+      if (handle.includes("w")) {
+        width += step;
+        x -= step;
+      }
+    }
+
+    if (event.key === "ArrowDown") {
+      if (handle.includes("s")) {
+        height += step;
+      }
+
+      if (handle.includes("n")) {
+        height = Math.max(MIN_LAYER_SIZE, height - step);
+        y = selectedLayer.y + selectedLayer.height - height;
+      }
+    }
+
+    if (event.key === "ArrowUp") {
+      if (handle.includes("s")) {
+        height = Math.max(MIN_LAYER_SIZE, height - step);
+      }
+
+      if (handle.includes("n")) {
+        height += step;
+        y -= step;
+      }
+    }
+
+    const nextLayer = {
+      ...selectedLayer,
+      x: snapGeometryValue(x, activeDocument.settings.gridSize, snapToGrid),
+      y: snapGeometryValue(y, activeDocument.settings.gridSize, snapToGrid),
+      width: snapSizeValue(width, activeDocument.settings.gridSize, snapToGrid),
+      height: snapSizeValue(height, activeDocument.settings.gridSize, snapToGrid),
+    } as LogoLayer;
+
+    onChangeDocument(
+      withActiveSelection(
+        {
+          ...activeDocument,
+          layers: activeDocument.layers.map((layer) => (layer.id === selectedLayer.id ? nextLayer : layer)),
+        },
+        [selectedLayer.id],
+      ),
+    );
+  }
+
   function handleRotatePointerDown(event: React.PointerEvent) {
     if (!selectedLayer || selectedLayer.locked) {
       return;
@@ -414,6 +499,30 @@ export function CanvasStage({
       startDocument: activeDocument,
       layerIds: [selectedLayer.id],
     });
+  }
+
+  function commitKeyboardRotation(event: React.KeyboardEvent) {
+    if (!selectedLayer || selectedLayer.locked || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const step = event.shiftKey ? KEYBOARD_ROTATION_LARGE_STEP : KEYBOARD_ROTATION_STEP;
+    const delta = event.key === "ArrowRight" ? step : -step;
+    const rotation = (selectedLayer.rotation + delta + 360) % 360;
+    const nextLayer = { ...selectedLayer, rotation } as LogoLayer;
+
+    onChangeDocument(
+      withActiveSelection(
+        {
+          ...activeDocument,
+          layers: activeDocument.layers.map((layer) => (layer.id === selectedLayer.id ? nextLayer : layer)),
+        },
+        [selectedLayer.id],
+      ),
+    );
   }
 
   return (
@@ -496,6 +605,7 @@ export function CanvasStage({
                       role="button"
                       tabIndex={0}
                       onPointerDown={(event) => handleResizePointerDown(event, handle)}
+                      onKeyDown={(event) => commitKeyboardResize(event, handle)}
                     >
                       <title>{`Resize ${handle}`}</title>
                     </rect>
@@ -517,6 +627,7 @@ export function CanvasStage({
                   role="button"
                   tabIndex={0}
                   onPointerDown={handleRotatePointerDown}
+                  onKeyDown={commitKeyboardRotation}
                 >
                   <title>Rotate layer</title>
                 </circle>
