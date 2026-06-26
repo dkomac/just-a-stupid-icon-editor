@@ -372,6 +372,24 @@ select:focus-visible {
   font-size: 12px;
 }
 
+.panel-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.clear-layers-button {
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.clear-layers-button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
 .panel-section {
   padding: 12px 0;
   border-top: 1px solid var(--line);

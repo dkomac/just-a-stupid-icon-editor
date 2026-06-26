@@ -148,6 +148,14 @@ export function deleteLayer(document: LogoDocument, layerId: string): LogoDocume
   };
 }
 
+export function clearLayers(document: LogoDocument): LogoDocument {
+  return {
+    ...document,
+    layers: [],
+    selectedLayerIds: [],
+  };
+}
+
 export function moveLayer(document: LogoDocument, layerId: string, targetIndex: number): LogoDocument {
   const currentIndex = document.layers.findIndex((layer) => layer.id === layerId);
 

@@ -122,6 +122,19 @@ describe("App", () => {
     expect(screen.queryByText("Masked")).not.toBeInTheDocument();
   });
 
+  it("clears all layers and restores them with undo", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Clear all layers" }));
+
+    expect(screen.getByText("Add a shape to start building your logo.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(screen.getByRole("button", { name: "Select layer Wordmark" })).toBeInTheDocument();
+  });
+
   it("multi-selects layers and aligns them from the inspector", async () => {
     const user = userEvent.setup();
     render(<App />);

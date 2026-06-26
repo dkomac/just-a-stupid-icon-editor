@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Lock, Trash2, Unlock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
+  clearLayers,
   deleteLayer,
   duplicateLayer,
   moveLayer,
@@ -75,7 +76,19 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
     <aside className="side-panel layers-panel" aria-label="Layers" role="region">
       <div className="panel-heading">
         <h2>Layers</h2>
-        <span>{document.layers.length}</span>
+        <div className="panel-heading-actions">
+          <span>{document.layers.length}</span>
+          <button
+            type="button"
+            className="secondary-button clear-layers-button"
+            aria-label="Clear all layers"
+            title="Clear all layers"
+            disabled={document.layers.length === 0}
+            onClick={() => onChangeDocument(clearLayers(document))}
+          >
+            Clear all
+          </button>
+        </div>
       </div>
       <div className="layer-list" aria-label="Layer list">
         {document.layers.length === 0 ? (

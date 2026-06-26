@@ -3,6 +3,7 @@ import {
   addLayer,
   alignLayers,
   applyMask,
+  clearLayers,
   createDocument,
   deleteLayer,
   duplicateLayer,
@@ -56,6 +57,15 @@ describe("document model", () => {
     expect(duplicated.layers[2].name).toBe("Dot copy");
     expect(moved.layers[0].name).toBe("Dot copy");
     expect(deleted.layers.map((layer) => layer.name)).toEqual(["Dot copy", "Dot"]);
+  });
+
+  it("clears every layer and selection", () => {
+    const first = addLayer(createDocument(), { type: "rect", name: "Base", x: 0, y: 0, width: 100, height: 100 });
+    const doc = addLayer(first, { type: "ellipse", name: "Dot", x: 20, y: 20, width: 40, height: 40 });
+    const cleared = clearLayers(doc);
+
+    expect(cleared.layers).toEqual([]);
+    expect(cleared.selectedLayerIds).toEqual([]);
   });
 
   it("aligns layers and snaps values", () => {

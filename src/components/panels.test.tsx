@@ -37,6 +37,22 @@ describe("editor panels", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it("clears all layers from the layers panel", async () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
+    const onChange = vi.fn();
+
+    render(<LayersPanel document={doc} selectedLayerIds={[doc.layers[0].id]} onSelectLayer={vi.fn()} onChangeDocument={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: "Clear all layers" }));
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ layers: [], selectedLayerIds: [] }));
+  });
+
+  it("disables clear all layers when the document is empty", () => {
+    render(<LayersPanel document={createDocument()} selectedLayerIds={[]} onSelectLayer={vi.fn()} onChangeDocument={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Clear all layers" })).toBeDisabled();
+  });
+
   it("adds layers to the selection with modifier clicks", async () => {
     const first = addLayer(createDocument(), { type: "rect", name: "First", x: 0, y: 0, width: 100, height: 100 });
     const doc = addLayer(first, { type: "ellipse", name: "Second", x: 120, y: 0, width: 80, height: 80 });
