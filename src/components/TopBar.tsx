@@ -39,7 +39,7 @@ export function TopBar({
       <div className="topbar-actions">
         <IconButton label="Undo" icon={<Undo2 size={17} strokeWidth={2} />} disabled={!canUndo} onClick={onUndo} />
         <IconButton label="Redo" icon={<Redo2 size={17} strokeWidth={2} />} disabled={!canRedo} onClick={onRedo} />
-        <span className="zoom-pill" aria-label="Zoom">
+        <span className="zoom-pill" aria-label={`Zoom ${Math.round(zoom * 100)} percent`} title="Zoom">
           {Math.round(zoom * 100)}%
         </span>
         <IconButton
@@ -54,7 +54,7 @@ export function TopBar({
           pressed={snapToGrid}
           onClick={onToggleSnap}
         />
-        <button type="button" className="primary-button" onClick={onOpenExport}>
+        <button type="button" className="primary-button" title="Export" onClick={onOpenExport}>
           <Download size={16} strokeWidth={2} aria-hidden="true" />
           Export
         </button>

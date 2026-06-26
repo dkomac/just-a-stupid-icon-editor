@@ -48,6 +48,7 @@ function LayerRenameField({
     <input
       className="layer-rename"
       aria-label={`Rename ${layer.name}`}
+      title={`Rename ${layer.name}`}
       value={name}
       onChange={(event) => setName(event.target.value)}
       onBlur={() => {
@@ -76,7 +77,7 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
         <h2>Layers</h2>
         <span>{document.layers.length}</span>
       </div>
-      <div className="layer-list">
+      <div className="layer-list" aria-label="Layer list">
         {document.layers.length === 0 ? (
           <p className="empty-note">Add a shape to start building your logo.</p>
         ) : (
@@ -85,12 +86,13 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
             const maskStatus = layer.maskedBy ? "Masked" : layer.maskFor?.length ? "Mask" : "";
 
             return (
-              <article key={layer.id} className="layer-row" data-selected={selected}>
+              <article key={layer.id} className="layer-row" data-selected={selected} aria-label={`Layer ${layer.name}`}>
                 <button
                   type="button"
                   className="layer-select"
                   aria-label={`Select layer ${layer.name}`}
                   aria-pressed={selected}
+                  title={`Select layer ${layer.name}`}
                   onClick={() => onSelectLayer(layer.id)}
                 >
                   <span className="layer-kind">{layer.type}</span>

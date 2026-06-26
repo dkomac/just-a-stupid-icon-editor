@@ -378,6 +378,15 @@ export function CanvasStage({
     });
   }
 
+  function handleLayerKeyDown(event: React.KeyboardEvent<SVGGElement>, layer: LogoLayer) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    onSelectLayer(layer.id);
+  }
+
   function handleResizePointerDown(event: React.PointerEvent, handle: ResizeHandle) {
     if (!selectedLayer || selectedLayer.locked) {
       return;
@@ -444,10 +453,14 @@ export function CanvasStage({
                 className="canvas-layer"
                 data-selected={selectedLayerIds.includes(layer.id)}
                 data-locked={layer.locked}
+                role="button"
+                tabIndex={0}
+                aria-label={`Canvas layer ${layer.name}`}
                 opacity={layer.opacity}
                 transform={layerTransform(layer)}
                 clipPath={clipId ? `url(#${clipId})` : undefined}
                 onPointerDown={(event) => handleLayerPointerDown(event, layer)}
+                onKeyDown={(event) => handleLayerKeyDown(event, layer)}
               >
                 <title>{layer.name}</title>
                 {renderLayerShape(layer)}
@@ -483,7 +496,9 @@ export function CanvasStage({
                       role="button"
                       tabIndex={0}
                       onPointerDown={(event) => handleResizePointerDown(event, handle)}
-                    />
+                    >
+                      <title>{`Resize ${handle}`}</title>
+                    </rect>
                   );
                 })}
                 <line
@@ -502,7 +517,9 @@ export function CanvasStage({
                   role="button"
                   tabIndex={0}
                   onPointerDown={handleRotatePointerDown}
-                />
+                >
+                  <title>Rotate layer</title>
+                </circle>
               </>
             ) : null}
           </g>

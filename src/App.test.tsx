@@ -45,6 +45,17 @@ describe("App", () => {
     expect(screen.getByRole("region", { name: "Inspector" })).toBeInTheDocument();
   });
 
+  it("labels the main editing controls", () => {
+    render(<App />);
+
+    expect(screen.getByRole("navigation", { name: "Shape tools" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Logo canvas" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Layers" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Inspector" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Redo" })).toBeInTheDocument();
+  });
+
   it("groups document name typing into a single undo step", async () => {
     const user = userEvent.setup();
     render(<App />);

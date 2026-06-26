@@ -23,7 +23,7 @@ const tools: Array<{ tool: EditorTool; label: string; icon: ReactNode; add?: Add
 
 export function Toolbar({ activeTool, onSelectTool, onAddLayer }: ToolbarProps) {
   return (
-    <nav className="toolbar" aria-label="Shape tools">
+    <nav className="toolbar" aria-label="Shape tools" title="Shape tools">
       <div className="toolbar-group" role="group" aria-label="Tools">
         {tools.map((tool) => (
           <IconButton

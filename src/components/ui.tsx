@@ -85,7 +85,9 @@ export function IconButton({
       title={label}
       onClick={onClick}
     >
-      {icon}
+      <span className="icon-button-icon" aria-hidden="true">
+        {icon}
+      </span>
     </button>
   );
 }
@@ -113,7 +115,7 @@ export function TextField({
 
   return (
     <label className="field">
-      <span>{label}</span>
+      <span className="field-label">{label}</span>
       <input
         type="text"
         value={textValue}
@@ -209,7 +211,7 @@ export function NumberField({
 
   return (
     <label className="field">
-      <span>{label}</span>
+      <span className="field-label">{label}</span>
       <input
         type="number"
         value={textValue}
@@ -297,7 +299,7 @@ export function ColorField({ label, value, disabled = false, commitOn = "blur", 
 
   return (
     <label className="field color-field">
-      <span>{label}</span>
+      <span className="field-label">{label}</span>
       <span className="color-input">
         <span className="color-swatch" style={{ background: normalizeHexColor(value) ?? value }} aria-hidden="true" />
         <input
@@ -349,7 +351,7 @@ export function SelectField<T extends string>({
 }: SelectFieldProps<T>) {
   return (
     <label className="field">
-      <span>{label}</span>
+      <span className="field-label">{label}</span>
       <select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value as T)}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>

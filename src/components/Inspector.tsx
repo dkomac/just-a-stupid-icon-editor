@@ -208,6 +208,7 @@ export function Inspector({
           <button
             type="button"
             className="secondary-button"
+            title="Use selected layer as mask"
             onClick={() => onUseSelectedLayerAsMask?.(selectedLayer.id)}
           >
             Use selected layer as mask
@@ -216,6 +217,7 @@ export function Inspector({
             type="button"
             className="secondary-button"
             disabled={!maskLayer || maskLayer.id === selectedLayer.id}
+            title="Apply selected mask to selected target"
             onClick={() => onApplySelectedMaskToSelectedTarget?.(selectedLayer.id)}
           >
             Apply selected mask to selected target
@@ -224,6 +226,7 @@ export function Inspector({
             type="button"
             className="secondary-button"
             disabled={!selectedLayer.maskedBy}
+            title="Release mask from selected target"
             onClick={() => onReleaseMaskFromSelectedTarget?.(selectedLayer.id)}
           >
             Release mask from selected target
