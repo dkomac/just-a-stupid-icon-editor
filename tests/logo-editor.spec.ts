@@ -8,6 +8,7 @@ test("opens directly into the logo editor shell", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Export" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Rectangle" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Ellipse" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Triangle" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Text" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Logo canvas" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Layers" })).toBeVisible();
@@ -22,7 +23,7 @@ test("centers toolbar tools in the rail", async ({ page }) => {
   expect(toolbarBox).toBeTruthy();
 
   const toolbarCenter = toolbarBox!.x + toolbarBox!.width / 2;
-  const toolNames = ["Select", "Rectangle", "Ellipse", "Polygon", "Star", "Line", "Text"];
+  const toolNames = ["Select", "Rectangle", "Ellipse", "Triangle", "Polygon", "Star", "Line", "Text"];
 
   for (const toolName of toolNames) {
     const toolBox = await toolbar.getByRole("button", { name: toolName }).boundingBox();
@@ -76,6 +77,17 @@ test("creates a shape, edits it in the inspector, and exports svg", async ({ pag
   expect(svg).toContain('aria-label="Sample Logo"');
   expect(svg).toContain('width="160"');
   expect(svg).toContain('fill="#aabbcc"');
+});
+
+test("creates triangle layers from the toolbar", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Triangle" }).click();
+
+  const layers = page.getByRole("region", { name: "Layers" });
+  await expect(layers.getByRole("article", { name: "Layer Triangle" })).toBeVisible();
+  await expect(layers.getByRole("button", { name: "Select layer Triangle" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("region", { name: "Inspector" }).getByText("path")).toBeVisible();
 });
 
 test("uses preview mode to swap canvas backgrounds", async ({ page }) => {

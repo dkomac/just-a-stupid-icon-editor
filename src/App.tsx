@@ -68,6 +68,15 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
     };
   }
 
+  if (kind === "triangle") {
+    return {
+      ...base,
+      type: "path",
+      name: "Triangle",
+      path: polygonPointsToPath(50, 50, 46, 3),
+    };
+  }
+
   if (kind === "star") {
     return {
       ...base,

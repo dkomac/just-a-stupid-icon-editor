@@ -39,6 +39,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Export" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rectangle" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ellipse" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Triangle" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Text" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Logo canvas" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Layers" })).toBeInTheDocument();
@@ -174,6 +175,17 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Select layer Rectangle" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Select layer Ellipse" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("adds triangle layers from the toolbar", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Triangle" }));
+
+    expect(screen.getByRole("article", { name: "Layer Triangle" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select layer Triangle" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Inspector" })).toHaveTextContent("path");
   });
 
   it("exports svg with the document filename", async () => {
