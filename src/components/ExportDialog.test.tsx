@@ -15,7 +15,7 @@ describe("ExportDialog", () => {
     render(<ExportDialog open document={createDocument()} onClose={onClose} onDownload={onDownload} />);
 
     await userEvent.selectOptions(screen.getByLabelText("Format"), "svg");
-    const downloadButton = screen.getByRole("button", { name: "Download" });
+    const downloadButton = screen.getByRole("button", { name: "Download SVG" });
     expect(downloadButton).toHaveTextContent("Download SVG");
     await userEvent.click(downloadButton);
 
@@ -39,11 +39,30 @@ describe("ExportDialog", () => {
     render(<ExportDialog open document={createDocument()} onClose={onClose} onDownload={onDownload} />);
 
     await userEvent.selectOptions(screen.getByLabelText("Format"), "pdf");
-    const downloadButton = screen.getByRole("button", { name: "Download" });
+    const downloadButton = screen.getByRole("button", { name: "Download PDF" });
     expect(downloadButton).toHaveTextContent("Download PDF");
     await userEvent.click(downloadButton);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("PDF export failed.");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("disables the download button while export is pending", async () => {
+    let resolveDownload: () => void = () => {};
+    const onDownload = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDownload = resolve;
+        }),
+    );
+    render(<ExportDialog open document={createDocument()} onClose={vi.fn()} onDownload={onDownload} />);
+
+    const downloadButton = screen.getByRole("button", { name: "Download SVG" });
+    await userEvent.click(downloadButton);
+    expect(downloadButton).toBeDisabled();
+    await userEvent.click(downloadButton);
+
+    expect(onDownload).toHaveBeenCalledTimes(1);
+    resolveDownload();
   });
 });

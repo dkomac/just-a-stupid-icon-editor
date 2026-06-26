@@ -189,7 +189,7 @@ describe("editor panels", () => {
     render(<ExportDialog open document={doc} onClose={vi.fn()} onDownload={onDownload} />);
 
     await userEvent.click(screen.getByLabelText("Transparent background"));
-    await userEvent.click(screen.getByRole("button", { name: "Download" }));
+    await userEvent.click(screen.getByRole("button", { name: "Download SVG" }));
 
     expect(onDownload).toHaveBeenCalledWith(
       expect.objectContaining({

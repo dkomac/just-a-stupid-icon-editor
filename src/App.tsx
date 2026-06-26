@@ -6,7 +6,6 @@ import { LayersPanel } from "./components/LayersPanel";
 import { Toolbar, type AddLayerKind, type EditorTool } from "./components/Toolbar";
 import { TopBar } from "./components/TopBar";
 import { addLayer, applyMask, releaseMask } from "./editor/document";
-import { createJpgBlob, createPdfBlob, createSvgBlob, createWebmBlob, downloadBlob } from "./editor/exporters";
 import { createHistory, pushHistory, redo, undo } from "./editor/history";
 import { sampleDocument } from "./editor/sample";
 import { polygonPointsToPath, starPointsToPath } from "./editor/svg";
@@ -166,6 +165,7 @@ export default function App() {
   }
 
   async function handleDownload(options: ExportOptions) {
+    const { createJpgBlob, createPdfBlob, createSvgBlob, createWebmBlob, downloadBlob } = await import("./editor/exporters");
     const blob =
       options.format === "svg"
         ? createSvgBlob(document, options)

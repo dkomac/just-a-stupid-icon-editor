@@ -1,34 +1,18 @@
 import { jsPDF } from "jspdf";
+import {
+  DEFAULT_EXPORT_QUALITY,
+  DEFAULT_EXPORT_SCALE,
+  normalizeExportOptions,
+  type ExportFormat,
+} from "./export-options";
 import { renderDocumentSvg } from "./svg";
 import type { ExportOptions, LogoDocument } from "./types";
 
-export type ExportFormat = ExportOptions["format"];
+export { normalizeExportOptions, type ExportFormat } from "./export-options";
 
-const DEFAULT_SIZE = 1024;
-const DEFAULT_BACKGROUND = "#ffffff";
-const DEFAULT_SCALE = 1;
-const MAX_EXPORT_DIMENSION = 8192;
-const MAX_EXPORT_SCALE = 4;
-const DEFAULT_JPG_QUALITY = 0.92;
 const WEBM_DURATION_MS = 2000;
 const WEBM_FPS = 30;
 const WEBM_MIME_TYPES = ["video/webm", "video/webm;codecs=vp9", "video/webm;codecs=vp8"];
-
-export function normalizeExportOptions(input: Partial<ExportOptions> & { format: ExportFormat }): ExportOptions {
-  const width = clampNumber(positiveInteger(input.width, DEFAULT_SIZE), 1, MAX_EXPORT_DIMENSION);
-  const height = clampNumber(positiveInteger(input.height, DEFAULT_SIZE), 1, MAX_EXPORT_DIMENSION);
-  const scale = clampNumber(positiveFiniteNumber(input.scale, DEFAULT_SCALE), 0.1, MAX_EXPORT_SCALE);
-  const background = normalizeBackground(input.background);
-
-  return {
-    format: input.format,
-    width,
-    height,
-    background,
-    scale,
-    quality: clampQuality(input.quality),
-  };
-}
 
 export function createSvgBlob(document: LogoDocument, options: Partial<ExportOptions> = {}): Blob {
   const svg = renderExportSvg(document, { ...options, format: "svg" });
@@ -40,7 +24,7 @@ export async function createJpgBlob(document: LogoDocument, options: ExportOptio
   const exportOptions = normalizeExportOptions(options);
   const canvas = await renderSvgToCanvas(renderExportSvg(document, exportOptions), exportOptions);
 
-  return canvasToBlob(canvas, "image/jpeg", exportOptions.quality ?? DEFAULT_JPG_QUALITY);
+  return canvasToBlob(canvas, "image/jpeg", exportOptions.quality ?? DEFAULT_EXPORT_QUALITY);
 }
 
 export async function createPdfBlob(document: LogoDocument, options: ExportOptions): Promise<Blob> {
@@ -61,7 +45,7 @@ export async function createPdfBlob(document: LogoDocument, options: ExportOptio
   });
   pdf.addMetadata(svg);
   pdf.addImage(
-    canvas.toDataURL("image/jpeg", exportOptions.quality ?? DEFAULT_JPG_QUALITY),
+    canvas.toDataURL("image/jpeg", exportOptions.quality ?? DEFAULT_EXPORT_QUALITY),
     "JPEG",
     0,
     0,
@@ -93,7 +77,7 @@ export async function createWebmBlob(document: LogoDocument, options: ExportOpti
     throw new Error(support.reason ?? "WebM export is not supported.");
   }
 
-  const exportOptions = normalizeExportOptions(options);
+  const exportOptions = normalizeExportOptions(options, { allowTransparent: true });
   const canvas = createExportCanvas(exportOptions);
   const stream = captureCanvasStream(canvas, WEBM_FPS);
   const recorder = new MediaRecorder(stream, { mimeType: support.mimeType });
@@ -175,14 +159,18 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 function renderExportSvg(document: LogoDocument, options: Partial<ExportOptions> & { format: ExportFormat }): string {
-  const exportOptions = normalizeExportOptions({
-    width: document.settings.width,
-    height: document.settings.height,
-    background: document.settings.background,
-    scale: DEFAULT_SCALE,
-    ...options,
-    format: options.format,
-  });
+  const allowTransparent = options.format === "svg" || options.format === "webm";
+  const exportOptions = normalizeExportOptions(
+    {
+      width: document.settings.width,
+      height: document.settings.height,
+      background: document.settings.background,
+      scale: DEFAULT_EXPORT_SCALE,
+      ...options,
+      format: options.format,
+    },
+    { allowTransparent },
+  );
 
   return renderDocumentSvg({
     ...document,
@@ -229,6 +217,10 @@ function get2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
 }
 
 function fillCanvasBackground(context: CanvasRenderingContext2D, options: ExportOptions): void {
+  if (options.background === "transparent") {
+    return;
+  }
+
   context.fillStyle = options.background;
   context.fillRect(0, 0, options.width * options.scale, options.height * options.scale);
 }
@@ -324,34 +316,4 @@ function captureCanvasStream(canvas: HTMLCanvasElement, fps: number): MediaStrea
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function positiveInteger(value: number | undefined, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.round(value) : fallback;
-}
-
-function positiveFiniteNumber(value: number | undefined, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function normalizeBackground(value: string | undefined): string {
-  const background = value?.trim();
-
-  if (!background || background === "transparent") {
-    return DEFAULT_BACKGROUND;
-  }
-
-  return background;
-}
-
-function clampQuality(value: number | undefined): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return DEFAULT_JPG_QUALITY;
-  }
-
-  return Math.min(1, Math.max(0, value));
 }

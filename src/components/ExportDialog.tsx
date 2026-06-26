@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { normalizeExportOptions } from "../editor/exporters";
+import { normalizeExportOptions } from "../editor/export-options";
 import type { ExportOptions, LogoDocument } from "../editor/types";
 import { CheckboxField, ColorField, IconButton, NumberField, SelectField } from "./ui";
 
@@ -37,18 +37,22 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
   const [quality, setQuality] = useState(0.92);
   const [scale, setScale] = useState(1);
   const [exportError, setExportError] = useState<string>();
+  const [isExporting, setIsExporting] = useState(false);
   const transparentAvailable = supportsTransparency(format);
   const normalizedOptions = useMemo<ExportDialogOptions>(
     () => {
       const useTransparentBackground = transparent && transparentAvailable;
-      const exportOptions = normalizeExportOptions({
-        format,
-        width,
-        height,
-        background: useTransparentBackground ? "transparent" : background,
-        quality: format === "jpg" || format === "webm" ? quality : undefined,
-        scale,
-      });
+      const exportOptions = normalizeExportOptions(
+        {
+          format,
+          width,
+          height,
+          background: useTransparentBackground ? "transparent" : background,
+          quality: format === "jpg" || format === "webm" ? quality : undefined,
+          scale,
+        },
+        { allowTransparent: transparentAvailable },
+      );
 
       return {
         ...exportOptions,
@@ -75,12 +79,19 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
   }
 
   async function handleDownload() {
+    if (isExporting) {
+      return;
+    }
+
     setExportError(undefined);
+    setIsExporting(true);
 
     try {
       await onDownload(normalizedOptions);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
     }
   }
 
@@ -90,6 +101,7 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
       setHeight(document.settings.height);
       setBackground(document.settings.background);
       setExportError(undefined);
+      setIsExporting(false);
     }
   }, [document.settings.background, document.settings.height, document.settings.width, open]);
 
@@ -187,7 +199,7 @@ export function ExportDialog({ open, document, onClose, onDownload }: ExportDial
         <button type="button" className="secondary-button" onClick={closeDialog}>
           Cancel
         </button>
-        <button type="button" className="primary-button" aria-label="Download" onClick={handleDownload}>
+        <button type="button" className="primary-button" disabled={isExporting} onClick={handleDownload}>
           Download {selectedFormatLabel}
         </button>
       </div>

@@ -251,7 +251,7 @@ export function renderDocumentSvg(document: LogoDocument, options: RenderSvgOpti
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${escapeAttribute(width)}" height="${escapeAttribute(height)}" viewBox="0 0 ${escapeAttribute(width)} ${escapeAttribute(height)}" role="img" aria-label="${escapeAttribute(document.name)}">`,
-    `<rect width="100%" height="100%" fill="${escapeAttribute(background)}" />`,
+    background === "transparent" ? "" : `<rect width="100%" height="100%" fill="${escapeAttribute(background)}" />`,
     clipPaths.length > 0 ? `<defs>${clipPaths.join("")}</defs>` : "",
     ...body,
     "</svg>",

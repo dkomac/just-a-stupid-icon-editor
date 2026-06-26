@@ -41,6 +41,14 @@ describe("exporters", () => {
     expect(await blob.text()).toContain("<svg");
   });
 
+  it("creates transparent svg exports without an opaque background rect", async () => {
+    const blob = createSvgBlob(createDocument(), { background: "transparent" });
+    const svg = await blob.text();
+
+    expect(svg).not.toContain('fill="#ffffff"');
+    expect(svg).not.toContain('<rect width="100%" height="100%"');
+  });
+
   it("reports webm support from MediaRecorder", () => {
     vi.stubGlobal("MediaRecorder", { isTypeSupported: () => true });
 
@@ -121,6 +129,19 @@ describe("exporters", () => {
     expect(recorder.removeEventListener).toHaveBeenCalledWith("dataavailable", expect.any(Function));
     expect(recorder.removeEventListener).toHaveBeenCalledWith("error", expect.any(Function));
     expect(recorder.removeEventListener).toHaveBeenCalledWith("stop", expect.any(Function));
+  });
+
+  it("records transparent webm frames without filling an opaque background", async () => {
+    vi.useFakeTimers();
+    const raster = installRasterMocks({ stream: true });
+    installMediaRecorderMock();
+
+    const promise = createWebmBlob(createDocument(), { format: "webm", width: 128, height: 128, background: "transparent", scale: 1 });
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(raster.fillRect).not.toHaveBeenCalled();
+    expect(raster.renderedSvg()).not.toContain('<rect width="100%" height="100%"');
   });
 
   it("stops webm stream tracks when rendering fails", async () => {

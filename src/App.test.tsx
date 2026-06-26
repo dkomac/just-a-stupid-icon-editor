@@ -1,6 +1,17 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const exporterMocks = vi.hoisted(() => ({
+  createSvgBlob: vi.fn(),
+  createJpgBlob: vi.fn(),
+  createPdfBlob: vi.fn(),
+  createWebmBlob: vi.fn(),
+  downloadBlob: vi.fn(),
+}));
+
+vi.mock("./editor/exporters", () => exporterMocks);
+
 import App from "./App";
 
 function dispatchPointerEvent(target: Document | Element | Window, type: string, options: { clientX?: number; clientY?: number; pointerId?: number }) {
@@ -17,6 +28,7 @@ function dispatchPointerEvent(target: Document | Element | Window, type: string,
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
 describe("App", () => {
@@ -97,5 +109,38 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
     expect(screen.queryByText("Masked")).not.toBeInTheDocument();
+  });
+
+  it("exports svg with the document filename", async () => {
+    const user = userEvent.setup();
+    const svgBlob = new Blob(["svg"], { type: "image/svg+xml" });
+    exporterMocks.createSvgBlob.mockReturnValue(svgBlob);
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.click(screen.getByRole("button", { name: "Download SVG" }));
+
+    await waitFor(() => expect(exporterMocks.downloadBlob).toHaveBeenCalledWith(svgBlob, "Sample Logo.svg"));
+    expect(exporterMocks.createSvgBlob).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Sample Logo" }),
+      expect.objectContaining({ format: "svg" }),
+    );
+  });
+
+  it("exports pdf through the async exporter with the selected extension", async () => {
+    const user = userEvent.setup();
+    const pdfBlob = new Blob(["pdf"], { type: "application/pdf" });
+    exporterMocks.createPdfBlob.mockResolvedValue(pdfBlob);
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.selectOptions(screen.getByLabelText("Format"), "pdf");
+    await user.click(screen.getByRole("button", { name: "Download PDF" }));
+
+    await waitFor(() => expect(exporterMocks.downloadBlob).toHaveBeenCalledWith(pdfBlob, "Sample Logo.pdf"));
+    expect(exporterMocks.createPdfBlob).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Sample Logo" }),
+      expect.objectContaining({ format: "pdf" }),
+    );
   });
 });
