@@ -73,6 +73,7 @@ function LayerRenameField({
 
 export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChangeDocument }: LayersPanelProps) {
   const [draggingLayerId, setDraggingLayerId] = useState<string>();
+  const [dragTargetLayerId, setDragTargetLayerId] = useState<string>();
   const visibleLayers = [...document.layers].reverse();
 
   function reorderLayerBefore(draggedLayerId: string, targetLayerId: string): LogoDocument {
@@ -129,6 +130,7 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
                 className="layer-row"
                 data-selected={selected}
                 data-dragging={draggingLayerId === layer.id}
+                data-drop-target={dragTargetLayerId === layer.id && draggingLayerId !== layer.id}
                 draggable
                 aria-label={`Layer ${layer.name}`}
                 onDragStart={(event) => {
@@ -136,15 +138,23 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
                   event.dataTransfer.setData("text/plain", layer.id);
                   setDraggingLayerId(layer.id);
                 }}
-                onDragEnd={() => setDraggingLayerId(undefined)}
+                onDragEnd={() => {
+                  setDraggingLayerId(undefined);
+                  setDragTargetLayerId(undefined);
+                }}
                 onDragOver={(event) => {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "move";
+                  setDragTargetLayerId(layer.id);
+                }}
+                onDragLeave={() => {
+                  setDragTargetLayerId((current) => (current === layer.id ? undefined : current));
                 }}
                 onDrop={(event) => {
                   event.preventDefault();
                   const draggedLayerId = event.dataTransfer.getData("text/plain") || draggingLayerId;
                   setDraggingLayerId(undefined);
+                  setDragTargetLayerId(undefined);
 
                   if (draggedLayerId && draggedLayerId !== layer.id) {
                     onChangeDocument(reorderLayerBefore(draggedLayerId, layer.id));

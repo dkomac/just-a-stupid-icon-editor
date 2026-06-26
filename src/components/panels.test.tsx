@@ -108,6 +108,29 @@ describe("editor panels", () => {
     );
   });
 
+  it("marks the layer row that will receive a dragged layer", () => {
+    const first = addLayer(createDocument(), { type: "rect", name: "Bottom", x: 0, y: 0, width: 100, height: 100 });
+    const doc = addLayer(first, { type: "ellipse", name: "Top", x: 0, y: 0, width: 100, height: 100 });
+    const dataTransfer = {
+      value: "",
+      effectAllowed: "",
+      dropEffect: "",
+      setData(_format: string, value: string) {
+        this.value = value;
+      },
+      getData() {
+        return this.value;
+      },
+    };
+
+    render(<LayersPanel document={doc} selectedLayerIds={[doc.layers[1].id]} onSelectLayer={vi.fn()} onChangeDocument={vi.fn()} />);
+    fireEvent.dragStart(screen.getByRole("article", { name: "Layer Bottom" }), { dataTransfer });
+    fireEvent.dragOver(screen.getByRole("article", { name: "Layer Top" }), { dataTransfer });
+
+    expect(screen.getByRole("article", { name: "Layer Top" })).toHaveAttribute("data-drop-target", "true");
+    expect(screen.getByRole("article", { name: "Layer Bottom" })).toHaveAttribute("data-dragging", "true");
+  });
+
   it("uses pressed state only for toggle buttons", () => {
     const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
 
