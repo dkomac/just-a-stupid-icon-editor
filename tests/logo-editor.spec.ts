@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 test("opens directly into the logo editor shell", async ({ page }) => {
   await page.goto("/");
@@ -11,6 +12,52 @@ test("opens directly into the logo editor shell", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Logo canvas" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Layers" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Inspector" })).toBeVisible();
+});
+
+test("creates a shape, edits it in the inspector, and exports svg", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Rectangle" }).click();
+
+  const layers = page.getByRole("region", { name: "Layers" });
+  await expect(layers.getByRole("article", { name: "Layer Rectangle" })).toBeVisible();
+  await expect(layers.getByRole("button", { name: "Select layer Rectangle" })).toHaveAttribute("aria-pressed", "true");
+
+  const inspector = page.getByRole("region", { name: "Inspector" });
+  await expect(inspector.getByText("rect")).toBeVisible();
+
+  const width = inspector.getByRole("spinbutton", { name: "Width", exact: true });
+  await expect(width).toHaveValue("128");
+  await width.fill("160");
+  await width.press("Enter");
+  await expect(width).toHaveValue("160");
+
+  const fill = inspector.getByLabel("Fill", { exact: true });
+  await expect(fill).toHaveValue("#2ec4b6");
+  await fill.fill("#abc");
+  await fill.press("Enter");
+  await expect(fill).toHaveValue("#aabbcc");
+
+  await page.getByRole("button", { name: "Export" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Export" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Format")).toHaveValue("svg");
+  await expect(dialog.getByRole("button", { name: "Download SVG" })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download SVG" }).click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+
+  expect(download.suggestedFilename()).toBe("Sample Logo.svg");
+  expect(downloadPath).toBeTruthy();
+
+  const svg = await readFile(downloadPath!, "utf8");
+  expect(svg).toContain("<svg");
+  expect(svg).toContain('aria-label="Sample Logo"');
+  expect(svg).toContain('width="160"');
+  expect(svg).toContain('fill="#aabbcc"');
 });
 
 test("keeps side panels usable on small screens", async ({ page }) => {
