@@ -23,6 +23,15 @@ const previewBackgroundOptions: PreviewBackgroundOption[] = [
   { label: "Transparent", value: "transparent" },
 ];
 
+const pathShapes = {
+  "half-circle": "M 0 50 A 50 50 0 0 1 100 50 L 100 100 L 0 100 Z",
+  heart:
+    "M 50 88 C 18 62 8 47 8 30 C 8 16 19 8 31 8 C 40 8 47 13 50 20 C 53 13 60 8 69 8 C 81 8 92 16 92 30 C 92 47 82 62 50 88 Z",
+  plus: "M 38 8 H 62 V 38 H 92 V 62 H 62 V 92 H 38 V 62 H 8 V 38 H 38 Z",
+  arrow: "M 6 38 H 58 V 18 L 94 50 L 58 82 V 62 H 6 Z",
+  speech: "M 12 14 H 88 Q 96 14 96 22 V 66 Q 96 74 88 74 H 54 L 30 94 V 74 H 12 Q 4 74 4 66 V 22 Q 4 14 12 14 Z",
+} as const;
+
 function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerInput {
   const centerX = document.settings.width / 2;
   const centerY = document.settings.height / 2;
@@ -78,12 +87,66 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
     };
   }
 
+  if (kind === "half-circle") {
+    return {
+      ...base,
+      type: "path",
+      name: "Half circle",
+      path: pathShapes["half-circle"],
+    };
+  }
+
+  if (kind === "diamond") {
+    return {
+      ...base,
+      type: "path",
+      name: "Diamond",
+      path: polygonPointsToPath(50, 50, 48, 4),
+    };
+  }
+
   if (kind === "star") {
     return {
       ...base,
       type: "path",
       name: "Star",
       path: starPointsToPath(50, 50, 48, 22, 5),
+    };
+  }
+
+  if (kind === "heart") {
+    return {
+      ...base,
+      type: "path",
+      name: "Heart",
+      path: pathShapes.heart,
+    };
+  }
+
+  if (kind === "plus") {
+    return {
+      ...base,
+      type: "path",
+      name: "Plus",
+      path: pathShapes.plus,
+    };
+  }
+
+  if (kind === "arrow") {
+    return {
+      ...base,
+      type: "path",
+      name: "Arrow",
+      path: pathShapes.arrow,
+    };
+  }
+
+  if (kind === "speech") {
+    return {
+      ...base,
+      type: "path",
+      name: "Speech bubble",
+      path: pathShapes.speech,
     };
   }
 

@@ -245,6 +245,31 @@ describe("editor panels", () => {
     );
   });
 
+  it("changes text layers with font alternatives", async () => {
+    const doc = addLayer(createDocument(), {
+      type: "text",
+      name: "Wordmark",
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 72,
+      text: "Logo",
+      fontFamily: "Inter",
+      fontSize: 48,
+      fontWeight: 800,
+    });
+    const onChange = vi.fn();
+
+    render(<Inspector document={doc} selectedLayerId={doc.layers[0].id} onChangeDocument={onChange} />);
+    await userEvent.selectOptions(screen.getByLabelText("Font family"), "Georgia");
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layers: [expect.objectContaining({ fontFamily: "Georgia" })],
+      }),
+    );
+  });
+
   it("disables locked layer inspector inputs", () => {
     const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
     const lockedDoc: LogoDocument = {

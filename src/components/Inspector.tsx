@@ -1,6 +1,6 @@
 import { alignLayers } from "../editor/document";
 import type { AlignmentMode, LogoDocument, LogoLayer } from "../editor/types";
-import { ColorField, NumberField, PanelSection, TextField } from "./ui";
+import { ColorField, NumberField, PanelSection, SelectField, TextField } from "./ui";
 
 interface InspectorProps {
   document: LogoDocument;
@@ -12,6 +12,18 @@ interface InspectorProps {
   onReleaseMaskFromSelectedTarget?: (targetLayerId: string) => void;
   onChangeDocument: (document: LogoDocument) => void;
 }
+
+const fontFamilyOptions = [
+  { value: "Inter", label: "Inter" },
+  { value: "Arial", label: "Arial" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "Times New Roman", label: "Times New Roman" },
+  { value: "Courier New", label: "Courier New" },
+  { value: "Trebuchet MS", label: "Trebuchet MS" },
+  { value: "Verdana", label: "Verdana" },
+  { value: "Impact", label: "Impact" },
+  { value: "Comic Sans MS", label: "Comic Sans MS" },
+];
 
 function updateDocumentSettings(document: LogoDocument, patch: Partial<LogoDocument["settings"]>): LogoDocument {
   return {
@@ -209,10 +221,11 @@ export function Inspector({
             disabled={disabled}
             onChange={(text) => onChangeDocument(updateLayer(document, selectedLayer.id, { text }))}
           />
-          <TextField
+          <SelectField
             label="Font family"
             value={selectedLayer.fontFamily}
             disabled={disabled}
+            options={fontFamilyOptions}
             onChange={(fontFamily) => onChangeDocument(updateLayer(document, selectedLayer.id, { fontFamily }))}
           />
           <NumberField

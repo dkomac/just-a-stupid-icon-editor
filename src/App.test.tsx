@@ -40,6 +40,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Rectangle" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ellipse" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Triangle" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Half circle" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Text" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Logo canvas" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Layers" })).toBeInTheDocument();
@@ -186,6 +187,20 @@ describe("App", () => {
     expect(screen.getByRole("article", { name: "Layer Triangle" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Select layer Triangle" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("region", { name: "Inspector" })).toHaveTextContent("path");
+  });
+
+  it("adds additional path shapes from the toolbar", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Half circle" }));
+    await user.click(screen.getByRole("button", { name: "Heart" }));
+    await user.click(screen.getByRole("button", { name: "Arrow" }));
+
+    expect(screen.getByRole("article", { name: "Layer Half circle" })).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Layer Heart" })).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Layer Arrow" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select layer Arrow" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("starts new shape fill and stroke with the same default color", async () => {

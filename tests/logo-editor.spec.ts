@@ -9,6 +9,7 @@ test("opens directly into the logo editor shell", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Rectangle" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Ellipse" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Triangle" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Half circle" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Text" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Logo canvas" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Layers" })).toBeVisible();
@@ -23,7 +24,22 @@ test("centers toolbar tools in the rail", async ({ page }) => {
   expect(toolbarBox).toBeTruthy();
 
   const toolbarCenter = toolbarBox!.x + toolbarBox!.width / 2;
-  const toolNames = ["Select", "Rectangle", "Ellipse", "Triangle", "Polygon", "Star", "Line", "Text"];
+  const toolNames = [
+    "Select",
+    "Rectangle",
+    "Ellipse",
+    "Half circle",
+    "Triangle",
+    "Diamond",
+    "Polygon",
+    "Star",
+    "Heart",
+    "Plus",
+    "Arrow",
+    "Speech bubble",
+    "Line",
+    "Text",
+  ];
 
   for (const toolName of toolNames) {
     const toolBox = await toolbar.getByRole("button", { name: toolName }).boundingBox();
@@ -89,6 +105,22 @@ test("creates triangle layers from the toolbar", async ({ page }) => {
   await expect(layers.getByRole("article", { name: "Layer Triangle" })).toBeVisible();
   await expect(layers.getByRole("button", { name: "Select layer Triangle" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("region", { name: "Inspector" }).getByText("path")).toBeVisible();
+});
+
+test("creates additional shapes and changes text fonts", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Half circle" }).click();
+  await page.getByRole("button", { name: "Heart" }).click();
+
+  const layers = page.getByRole("region", { name: "Layers" });
+  await expect(layers.getByRole("article", { name: "Layer Half circle" })).toBeVisible();
+  await expect(layers.getByRole("article", { name: "Layer Heart" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Text" }).click();
+  const inspector = page.getByRole("region", { name: "Inspector" });
+  await inspector.getByLabel("Font family").selectOption("Georgia");
+  await expect(inspector.getByLabel("Font family")).toHaveValue("Georgia");
 });
 
 test("shows top layers first and reorders layers with drag and drop", async ({ page }) => {
