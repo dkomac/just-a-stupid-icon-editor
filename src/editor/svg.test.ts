@@ -50,6 +50,77 @@ describe("svg serialization", () => {
     expect(svg).toContain('transform="scale(2 1)"');
   });
 
+  it("serializes grouped layers with each child style preserved", () => {
+    const document: LogoDocument = {
+      ...createDocument(),
+      layers: [
+        {
+          id: "group-1",
+          type: "group",
+          name: "Merged mark",
+          visible: true,
+          locked: false,
+          x: 10,
+          y: 20,
+          width: 200,
+          height: 100,
+          rotation: 0,
+          opacity: 1,
+          fill: "transparent",
+          strokeWidth: 0,
+          children: [
+            {
+              id: "child-rect",
+              type: "rect",
+              name: "Red block",
+              visible: true,
+              locked: false,
+              x: 0,
+              y: 0,
+              width: 50,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              fill: "#ff3366",
+              stroke: "#111111",
+              strokeWidth: 1,
+              cornerRadius: 4,
+            },
+            {
+              id: "child-text",
+              type: "text",
+              name: "Word",
+              visible: true,
+              locked: false,
+              x: 50,
+              y: 20,
+              width: 50,
+              height: 40,
+              rotation: 12,
+              opacity: 1,
+              fill: "#14213d",
+              stroke: "transparent",
+              strokeWidth: 0,
+              text: "Logo",
+              fontFamily: "Georgia",
+              fontSize: 20,
+              fontWeight: 700,
+            },
+          ],
+        },
+      ],
+    };
+
+    const svg = renderDocumentSvg(document);
+
+    expect(svg).toContain('data-layer-name="Merged mark"');
+    expect(svg).toContain('transform="translate(10 20)"');
+    expect(svg).toContain('fill="#ff3366"');
+    expect(svg).toContain('fill="#14213d"');
+    expect(svg).toContain("Logo");
+    expect(parserErrorCount(svg)).toBe(0);
+  });
+
   it("skips hidden layers", () => {
     const visibleDoc = addLayer(createDocument(), { type: "rect", name: "Hidden", x: 0, y: 0, width: 100, height: 100 });
     const doc = toggleLayerVisible(visibleDoc, visibleDoc.layers[0].id);

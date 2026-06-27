@@ -126,6 +126,22 @@ function renderLayerShape(layer: LogoLayer, forClipPath = false) {
     );
   }
 
+  if (layer.type === "group") {
+    return (
+      <g transform={`translate(${layer.x} ${layer.y})`}>
+        <g transform={`scale(${layer.width / 100} ${layer.height / 100})`}>
+          {layer.children
+            .filter((child) => child.visible)
+            .map((child) => (
+              <g key={child.id} opacity={child.opacity} transform={layerTransform(child)}>
+                {renderLayerShape(child, forClipPath)}
+              </g>
+            ))}
+        </g>
+      </g>
+    );
+  }
+
   return (
     <g transform={`translate(${layer.x} ${layer.y})`}>
       <g transform={`scale(${layer.width / 100} ${layer.height / 100})`}>

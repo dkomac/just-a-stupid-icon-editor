@@ -172,38 +172,53 @@ export function Inspector({
           onChange={(rotation) => onChangeDocument(updateLayer(document, selectedLayer.id, { rotation }))}
         />
       </PanelSection>
-      <PanelSection title="Style">
-        <ColorField
-          label="Fill"
-          value={selectedLayer.fill}
-          disabled={disabled}
-          onChange={(fill) => onChangeDocument(updateLayer(document, selectedLayer.id, { fill }))}
-        />
-        <ColorField
-          label="Stroke"
-          value={selectedLayer.stroke ?? "#000000"}
-          disabled={disabled}
-          onChange={(stroke) => onChangeDocument(updateLayer(document, selectedLayer.id, { stroke }))}
-        />
-        <SliderField
-          label="Stroke width"
-          value={selectedLayer.strokeWidth}
-          disabled={disabled}
-          min={0}
-          max={40}
-          suffix=" px"
-          onChange={(strokeWidth) => onChangeDocument(updateLayer(document, selectedLayer.id, { strokeWidth }))}
-        />
-        <NumberField
-          label="Opacity"
-          value={selectedLayer.opacity}
-          disabled={disabled}
-          min={0}
-          max={1}
-          step={0.05}
-          onChange={(opacity) => onChangeDocument(updateLayer(document, selectedLayer.id, { opacity }))}
-        />
-      </PanelSection>
+      {selectedLayer.type === "group" ? (
+        <PanelSection title="Group">
+          <NumberField label="Layers" value={selectedLayer.children.length} disabled onChange={() => {}} />
+          <NumberField
+            label="Opacity"
+            value={selectedLayer.opacity}
+            disabled={disabled}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(opacity) => onChangeDocument(updateLayer(document, selectedLayer.id, { opacity }))}
+          />
+        </PanelSection>
+      ) : (
+        <PanelSection title="Style">
+          <ColorField
+            label="Fill"
+            value={selectedLayer.fill}
+            disabled={disabled}
+            onChange={(fill) => onChangeDocument(updateLayer(document, selectedLayer.id, { fill }))}
+          />
+          <ColorField
+            label="Stroke"
+            value={selectedLayer.stroke ?? "#000000"}
+            disabled={disabled}
+            onChange={(stroke) => onChangeDocument(updateLayer(document, selectedLayer.id, { stroke }))}
+          />
+          <SliderField
+            label="Stroke width"
+            value={selectedLayer.strokeWidth}
+            disabled={disabled}
+            min={0}
+            max={40}
+            suffix=" px"
+            onChange={(strokeWidth) => onChangeDocument(updateLayer(document, selectedLayer.id, { strokeWidth }))}
+          />
+          <NumberField
+            label="Opacity"
+            value={selectedLayer.opacity}
+            disabled={disabled}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(opacity) => onChangeDocument(updateLayer(document, selectedLayer.id, { opacity }))}
+          />
+        </PanelSection>
+      )}
       {selectedLayer.type === "rect" ? (
         <PanelSection title="Shape">
           <NumberField

@@ -79,7 +79,7 @@ describe("editor panels", () => {
 
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({
-        layers: [expect.objectContaining({ name: "Orb + Base", type: "path" })],
+        layers: [expect.objectContaining({ name: "Orb + Base", type: "group" })],
       }),
     );
   });

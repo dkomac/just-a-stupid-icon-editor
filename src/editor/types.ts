@@ -1,4 +1,4 @@
-export type LayerType = "rect" | "ellipse" | "text" | "path";
+export type LayerType = "rect" | "ellipse" | "text" | "path" | "group";
 
 export type AlignmentMode = "left" | "center" | "right" | "top" | "middle" | "bottom";
 
@@ -52,7 +52,12 @@ export interface PathLayer extends BaseLayer {
   path: string;
 }
 
-export type LogoLayer = RectLayer | EllipseLayer | TextLayer | PathLayer;
+export interface GroupLayer extends BaseLayer {
+  type: "group";
+  children: LogoLayer[];
+}
+
+export type LogoLayer = RectLayer | EllipseLayer | TextLayer | PathLayer | GroupLayer;
 
 type LayerInputDefaults = Partial<Geometry> &
   Partial<LayerStyle> &
@@ -63,6 +68,7 @@ type LayerInputDefaults = Partial<Geometry> &
     fontSize?: number;
     fontWeight?: number;
     path?: string;
+    children?: LogoLayer[];
   };
 
 export type NewLayerInput = LayerInputDefaults & Pick<Geometry, "x" | "y" | "width" | "height">;

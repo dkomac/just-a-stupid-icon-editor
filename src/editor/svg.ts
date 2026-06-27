@@ -146,6 +146,22 @@ function layerShapeMarkup(layer: LogoLayer, forClipPath = false): string {
     return `<text x="${escapeAttribute(x)}" y="${escapeAttribute(y + height / 2)}" dominant-baseline="middle" font-family="${escapeAttribute(safeFontFamily(layer.fontFamily))}" font-size="${escapeAttribute(fontSize)}" font-weight="${escapeAttribute(fontWeight)}" ${paint}${transform}>${escapeText(layer.text)}</text>`;
   }
 
+  if (layer.type === "group") {
+    const rotation = safeNumber(layer.rotation);
+    const rotationOpen = rotation === 0 ? "" : `<g transform="rotate(${point(rotation)} ${point(width / 2)} ${point(height / 2)})">`;
+    const rotationClose = rotation === 0 ? "" : "</g>";
+    const children = layer.children
+      .filter((child) => child.visible)
+      .map((child) => {
+        const opacityValue = safeUnitNumber(child.opacity);
+        const opacity = opacityValue !== 1 ? ` opacity="${escapeAttribute(opacityValue)}"` : "";
+        return `<g${opacity}>${layerShapeMarkup(child, forClipPath)}</g>`;
+      })
+      .join("");
+
+    return `<g transform="translate(${point(x)} ${point(y)})">${rotationOpen}<g transform="scale(${point(width / 100)} ${point(height / 100)})">${children}</g>${rotationClose}</g>`;
+  }
+
   const rotation = safeNumber(layer.rotation);
   const rotationTransform = rotation === 0 ? "" : `<g transform="rotate(${point(rotation)} ${point(width / 2)} ${point(height / 2)})">`;
   const rotationClose = rotation === 0 ? "" : "</g>";

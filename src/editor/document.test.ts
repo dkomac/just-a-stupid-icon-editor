@@ -73,7 +73,7 @@ describe("document model", () => {
     expect(secondDuplicate.selectedLayerIds).toEqual([secondDuplicate.layers[1].id]);
   });
 
-  it("merges a shape layer with the layer below it", () => {
+  it("merges a layer with the layer below into an editable group", () => {
     const first = addLayer(createDocument(), {
       type: "rect",
       name: "Base",
@@ -81,21 +81,26 @@ describe("document model", () => {
       y: 20,
       width: 100,
       height: 80,
-      fill: "#2ec4b6",
-      stroke: "#2ec4b6",
+      fill: "#ff3366",
+      stroke: "#111111",
       strokeWidth: 0,
       cornerRadius: 0,
     });
     const doc = addLayer(first, {
-      type: "ellipse",
-      name: "Orb",
+      type: "text",
+      name: "Wordmark",
       x: 80,
       y: 60,
       width: 60,
       height: 60,
-      fill: "#2ec4b6",
-      stroke: "#2ec4b6",
+      fill: "#14213d",
+      stroke: "transparent",
       strokeWidth: 0,
+      text: "Logo",
+      fontFamily: "Georgia",
+      fontSize: 24,
+      fontWeight: 700,
+      rotation: 12,
     });
 
     expect(canMergeLayerDown(doc, doc.layers[1].id)).toBe(true);
@@ -104,35 +109,24 @@ describe("document model", () => {
 
     expect(merged.layers).toHaveLength(1);
     expect(merged.layers[0]).toMatchObject({
-      type: "path",
-      name: "Orb + Base",
+      type: "group",
+      name: "Wordmark + Base",
       x: 10,
       y: 20,
       width: 130,
       height: 100,
-      fill: "#2ec4b6",
-      stroke: "#2ec4b6",
-      strokeWidth: 0,
     });
-    expect(merged.layers[0]).toHaveProperty("path", expect.stringContaining("Z M"));
+    expect(merged.layers[0]).toHaveProperty("children", [
+      expect.objectContaining({ type: "rect", name: "Base", fill: "#ff3366", x: 0, y: 0 }),
+      expect.objectContaining({ type: "text", name: "Wordmark", fill: "#14213d", rotation: 12 }),
+    ]);
     expect(merged.selectedLayerIds).toEqual([merged.layers[0].id]);
   });
 
-  it("does not merge incompatible layers", () => {
+  it("does not merge layers with mask relationships", () => {
     const first = addLayer(createDocument(), { type: "rect", name: "Base", x: 0, y: 0, width: 100, height: 100, fill: "#111111" });
-    const doc = addLayer(first, {
-      type: "text",
-      name: "Wordmark",
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 40,
-      text: "Logo",
-      fontFamily: "Inter",
-      fontSize: 24,
-      fontWeight: 800,
-      fill: "#111111",
-    });
+    const withTarget = addLayer(first, { type: "ellipse", name: "Target", x: 20, y: 20, width: 80, height: 80 });
+    const doc = applyMask(withTarget, withTarget.layers[0].id, withTarget.layers[1].id);
 
     expect(canMergeLayerDown(doc, doc.layers[1].id)).toBe(false);
     expect(mergeLayerDown(doc, doc.layers[1].id)).toBe(doc);
