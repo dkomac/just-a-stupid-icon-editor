@@ -10,3 +10,10 @@ vitest.config.js
 vitest.config.d.ts
 playwright.config.js
 playwright.config.d.ts
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
