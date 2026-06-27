@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CanvasStage } from "./components/CanvasStage";
 import { ExportDialog } from "./components/ExportDialog";
 import { Inspector } from "./components/Inspector";
@@ -9,7 +9,7 @@ import { addLayer, applyMask, releaseMask } from "./editor/document";
 import { createHistory, pushHistory, redo, undo } from "./editor/history";
 import { sampleDocument } from "./editor/sample";
 import { polygonPointsToPath, starPointsToPath } from "./editor/svg";
-import type { ExportOptions, LogoDocument, NewLayerInput } from "./editor/types";
+import type { ExportOptions, LogoDocument, LogoLayer, NewLayerInput } from "./editor/types";
 
 const previewBackgroundOptions: PreviewBackgroundOption[] = [
   { label: "Light", value: "#ffffff" },
@@ -38,6 +38,18 @@ const pathShapes = {
 
 function clampZoom(value: number): number {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(2))));
+}
+
+function isMovementKey(key: string): key is "ArrowUp" | "ArrowRight" | "ArrowDown" | "ArrowLeft" {
+  return key === "ArrowUp" || key === "ArrowRight" || key === "ArrowDown" || key === "ArrowLeft";
+}
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.isContentEditable || Boolean(target.closest("input, textarea, select"));
 }
 
 function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerInput {
@@ -270,6 +282,71 @@ export default function App() {
 
     setZoom((current) => clampZoom(current + (deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP)));
   }
+
+  function handleMoveSelectedLayers(key: "ArrowUp" | "ArrowRight" | "ArrowDown" | "ArrowLeft", faster: boolean) {
+    if (previewMode || selectedLayerIds.length === 0) {
+      return;
+    }
+
+    const step = (snapToGrid ? document.settings.gridSize : 1) * (faster ? 4 : 1);
+    const deltaX = key === "ArrowRight" ? step : key === "ArrowLeft" ? -step : 0;
+    const deltaY = key === "ArrowDown" ? step : key === "ArrowUp" ? -step : 0;
+    const selectedIds = new Set(selectedLayerIds);
+    let moved = false;
+    const layers = document.layers.map((layer) => {
+      if (!selectedIds.has(layer.id) || layer.locked) {
+        return layer;
+      }
+
+      moved = true;
+      return {
+        ...layer,
+        x: layer.x + deltaX,
+        y: layer.y + deltaY,
+      } as LogoLayer;
+    });
+
+    if (!moved) {
+      return;
+    }
+
+    commitDocument({
+      ...document,
+      layers,
+      selectedLayerIds,
+    });
+  }
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (isEditableShortcutTarget(event.target)) {
+        return;
+      }
+
+      const usesCommandKey = event.metaKey || event.ctrlKey;
+      const key = event.key.toLowerCase();
+
+      if (usesCommandKey && key === "z") {
+        event.preventDefault();
+
+        if (event.shiftKey) {
+          handleRedo();
+          return;
+        }
+
+        handleUndo();
+        return;
+      }
+
+      if (!usesCommandKey && !event.altKey && isMovementKey(event.key)) {
+        event.preventDefault();
+        handleMoveSelectedLayers(event.key, event.shiftKey);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
 
   function handleUseSelectedLayerAsMask(layerId: string) {
     setSelectedMaskLayerId(layerId);

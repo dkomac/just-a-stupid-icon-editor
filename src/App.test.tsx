@@ -148,6 +148,42 @@ describe("App", () => {
     expect(screen.getByLabelText("Zoom 100 percent")).toBeInTheDocument();
   });
 
+  it("moves the selected layer with arrow keys", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(screen.getByLabelText("X")).toHaveValue(144);
+
+    fireEvent.keyDown(window, { key: "ArrowDown", shiftKey: true });
+    expect(screen.getByLabelText("Y")).toHaveValue(316);
+  });
+
+  it("uses keyboard shortcuts for undo and redo", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(screen.getByLabelText("X")).toHaveValue(144);
+
+    fireEvent.keyDown(window, { key: "z", metaKey: true });
+    expect(screen.getByLabelText("X")).toHaveValue(136);
+
+    fireEvent.keyDown(window, { key: "z", metaKey: true, shiftKey: true });
+    expect(screen.getByLabelText("X")).toHaveValue(144);
+  });
+
+  it("does not hijack undo shortcuts while typing in fields", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Rectangle" }));
+    const name = screen.getByLabelText("Name");
+    await user.click(name);
+
+    fireEvent.keyDown(name, { key: "z", metaKey: true });
+
+    expect(screen.getByRole("button", { name: "Select layer Rectangle" })).toBeInTheDocument();
+  });
+
   it("applies masks through history so undo releases the target", async () => {
     const user = userEvent.setup();
     render(<App />);

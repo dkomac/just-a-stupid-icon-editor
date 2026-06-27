@@ -115,6 +115,23 @@ test("zooms the canvas with wheel scrolling", async ({ page }) => {
   await expect(page.getByLabel("Zoom 100 percent")).toBeVisible();
 });
 
+test("moves selected layers and uses undo shortcuts from the keyboard", async ({ page }) => {
+  await page.goto("/");
+
+  const inspector = page.getByRole("region", { name: "Inspector" });
+  const x = inspector.getByRole("spinbutton", { name: "X" });
+  await expect(x).toHaveValue("136");
+
+  await page.keyboard.press("ArrowRight");
+  await expect(x).toHaveValue("144");
+
+  await page.keyboard.press("Control+Z");
+  await expect(x).toHaveValue("136");
+
+  await page.keyboard.press("Control+Shift+Z");
+  await expect(x).toHaveValue("144");
+});
+
 test("creates triangle layers from the toolbar", async ({ page }) => {
   await page.goto("/");
 
