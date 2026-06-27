@@ -1,6 +1,6 @@
 import { alignLayers } from "../editor/document";
 import type { AlignmentMode, LogoDocument, LogoLayer } from "../editor/types";
-import { ColorField, NumberField, PanelSection, SelectField, TextField } from "./ui";
+import { ColorField, NumberField, PanelSection, SelectField, SliderField, TextField } from "./ui";
 
 interface InspectorProps {
   document: LogoDocument;
@@ -185,11 +185,13 @@ export function Inspector({
           disabled={disabled}
           onChange={(stroke) => onChangeDocument(updateLayer(document, selectedLayer.id, { stroke }))}
         />
-        <NumberField
+        <SliderField
           label="Stroke width"
           value={selectedLayer.strokeWidth}
           disabled={disabled}
           min={0}
+          max={40}
+          suffix=" px"
           onChange={(strokeWidth) => onChangeDocument(updateLayer(document, selectedLayer.id, { strokeWidth }))}
         />
         <NumberField

@@ -70,6 +70,13 @@ test("creates a shape, edits it in the inspector, and exports svg", async ({ pag
   const fill = inspector.getByLabel("Fill", { exact: true });
   await expect(fill).toHaveValue("#2ec4b6");
   await expect(inspector.getByLabel("Stroke", { exact: true })).toHaveValue("#2ec4b6");
+  const strokeWidth = inspector.getByRole("slider", { name: "Stroke width" });
+  await expect(strokeWidth).toHaveValue("0");
+  await strokeWidth.focus();
+  for (let i = 0; i < 12; i += 1) {
+    await strokeWidth.press("ArrowRight");
+  }
+  await expect(strokeWidth).toHaveValue("12");
   await fill.fill("#abc");
   await fill.press("Enter");
   await expect(fill).toHaveValue("#aabbcc");
@@ -94,6 +101,7 @@ test("creates a shape, edits it in the inspector, and exports svg", async ({ pag
   expect(svg).toContain('aria-label="Sample Logo"');
   expect(svg).toContain('width="160"');
   expect(svg).toContain('fill="#aabbcc"');
+  expect(svg).toContain('stroke-width="12"');
 });
 
 test("creates triangle layers from the toolbar", async ({ page }) => {

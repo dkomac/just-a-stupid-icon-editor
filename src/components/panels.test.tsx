@@ -245,6 +245,37 @@ describe("editor panels", () => {
     );
   });
 
+  it("changes stroke width with a slider", () => {
+    const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 0, y: 0, width: 100, height: 100 });
+    const onChange = vi.fn();
+
+    function StrokeWidthHarness() {
+      const [document, setDocument] = useState(doc);
+
+      return (
+        <Inspector
+          document={document}
+          selectedLayerId={document.layers[0].id}
+          onChangeDocument={(nextDocument) => {
+            onChange(nextDocument);
+            setDocument(nextDocument);
+          }}
+        />
+      );
+    }
+
+    render(<StrokeWidthHarness />);
+
+    fireEvent.change(screen.getByRole("slider", { name: "Stroke width" }), { target: { value: "12" } });
+
+    expect(screen.getByText("12 px")).toBeInTheDocument();
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layers: [expect.objectContaining({ strokeWidth: 12 })],
+      }),
+    );
+  });
+
   it("changes text layers with font alternatives", async () => {
     const doc = addLayer(createDocument(), {
       type: "text",

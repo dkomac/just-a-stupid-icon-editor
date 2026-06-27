@@ -43,7 +43,7 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
     height: 128,
     fill: defaultColor,
     stroke: defaultColor,
-    strokeWidth: 4,
+    strokeWidth: 0,
   };
 
   if (kind === "rect") {
@@ -156,8 +156,8 @@ function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerI
     name: "Line",
     height: 24,
     fill: defaultColor,
-    strokeWidth: 8,
-    path: "M 0 50 L 100 50",
+    strokeWidth: 0,
+    path: "M 0 40 H 100 V 60 H 0 Z",
   };
 }
 

@@ -203,7 +203,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Select layer Arrow" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("starts new shape fill and stroke with the same default color", async () => {
+  it("starts new shape fill and stroke with the same default color and no stroke width", async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -211,6 +211,7 @@ describe("App", () => {
 
     expect(screen.getByLabelText("Fill")).toHaveValue("#2ec4b6");
     expect(screen.getByLabelText("Stroke")).toHaveValue("#2ec4b6");
+    expect(screen.getByRole("slider", { name: "Stroke width" })).toHaveValue("0");
   });
 
   it("exports svg with the document filename", async () => {

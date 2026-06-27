@@ -33,6 +33,17 @@ interface NumberFieldProps {
   onChange: (value: number) => void;
 }
 
+interface SliderFieldProps {
+  label: string;
+  value: number;
+  disabled?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  suffix?: string;
+  onChange: (value: number) => void;
+}
+
 interface ColorFieldProps {
   label: string;
   value: string;
@@ -248,6 +259,40 @@ export function NumberField({
           }
         }}
       />
+    </label>
+  );
+}
+
+export function SliderField({
+  label,
+  value,
+  disabled = false,
+  min = 0,
+  max = 40,
+  step = 1,
+  suffix = "",
+  onChange,
+}: SliderFieldProps) {
+  const safeValue = Number.isFinite(value) ? clamp(value, min, max) : min;
+
+  return (
+    <label className="field slider-field">
+      <span className="field-label">{label}</span>
+      <span className="slider-input">
+        <input
+          type="range"
+          value={safeValue}
+          disabled={disabled}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(event) => onChange(clamp(Number(event.target.value), min, max))}
+        />
+        <span className="slider-value" aria-hidden="true">
+          {safeValue}
+          {suffix}
+        </span>
+      </span>
     </label>
   );
 }
