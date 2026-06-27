@@ -23,6 +23,10 @@ const previewBackgroundOptions: PreviewBackgroundOption[] = [
   { label: "Transparent", value: "transparent" },
 ];
 
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 0.1;
+
 const pathShapes = {
   "half-circle": "M 0 50 A 50 50 0 0 1 100 50 L 100 100 L 0 100 Z",
   heart:
@@ -31,6 +35,10 @@ const pathShapes = {
   arrow: "M 6 38 H 58 V 18 L 94 50 L 58 82 V 62 H 6 Z",
   speech: "M 12 14 H 88 Q 96 14 96 22 V 66 Q 96 74 88 74 H 54 L 30 94 V 74 H 12 Q 4 74 4 66 V 22 Q 4 14 12 14 Z",
 } as const;
+
+function clampZoom(value: number): number {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(2))));
+}
 
 function createLayerInput(kind: AddLayerKind, document: LogoDocument): NewLayerInput {
   const centerX = document.settings.width / 2;
@@ -171,7 +179,7 @@ export default function App() {
   const [selectedMaskLayerId, setSelectedMaskLayerId] = useState<string>();
   const [previewMode, setPreviewMode] = useState(false);
   const [previewBackground, setPreviewBackground] = useState(sampleDocument.settings.background);
-  const [zoom] = useState(1);
+  const [zoom, setZoom] = useState(1);
   const document = history.present;
   const selectedLayerId = selectedLayerIds[0];
 
@@ -255,6 +263,14 @@ export default function App() {
     setPreviewMode((current) => !current);
   }
 
+  function handleCanvasZoom(deltaY: number) {
+    if (deltaY === 0) {
+      return;
+    }
+
+    setZoom((current) => clampZoom(current + (deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP)));
+  }
+
   function handleUseSelectedLayerAsMask(layerId: string) {
     setSelectedMaskLayerId(layerId);
   }
@@ -317,7 +333,9 @@ export default function App() {
             snapToGrid={snapToGrid}
             readOnly={previewMode}
             previewBackground={previewMode ? previewBackground : undefined}
+            zoom={zoom}
             onSelectLayer={handleSelectLayer}
+            onZoom={handleCanvasZoom}
             onChangeDocument={commitDocument}
           />
         </section>

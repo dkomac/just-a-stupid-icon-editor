@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { snapValue } from "../editor/document";
 import type { LogoDocument, LogoLayer } from "../editor/types";
@@ -9,7 +10,9 @@ interface CanvasStageProps {
   snapToGrid: boolean;
   readOnly?: boolean;
   previewBackground?: string;
+  zoom?: number;
   onSelectLayer: (layerId: string) => void;
+  onZoom?: (deltaY: number) => void;
   onChangeDocument: (document: LogoDocument) => void;
 }
 
@@ -162,7 +165,9 @@ export function CanvasStage({
   snapToGrid,
   readOnly = false,
   previewBackground,
+  zoom = 1,
   onSelectLayer,
+  onZoom,
   onChangeDocument,
 }: CanvasStageProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -555,7 +560,21 @@ export function CanvasStage({
   }
 
   return (
-    <div className="canvas-stage" data-grid={showGrid} data-preview={readOnly} data-preview-background={previewBackground}>
+    <div
+      className="canvas-stage"
+      data-grid={showGrid}
+      data-preview={readOnly}
+      data-preview-background={previewBackground}
+      style={{ "--canvas-zoom": String(zoom) } as CSSProperties}
+      onWheel={(event) => {
+        if (!onZoom) {
+          return;
+        }
+
+        event.preventDefault();
+        onZoom(event.deltaY);
+      }}
+    >
       <svg
         ref={svgRef}
         className="canvas-svg"

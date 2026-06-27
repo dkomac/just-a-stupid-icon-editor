@@ -104,6 +104,17 @@ test("creates a shape, edits it in the inspector, and exports svg", async ({ pag
   expect(svg).toContain('stroke-width="12"');
 });
 
+test("zooms the canvas with wheel scrolling", async ({ page }) => {
+  await page.goto("/");
+
+  const canvas = page.getByRole("img", { name: "Sample Logo" });
+  await canvas.dispatchEvent("wheel", { deltaY: -100 });
+  await expect(page.getByLabel("Zoom 110 percent")).toBeVisible();
+
+  await canvas.dispatchEvent("wheel", { deltaY: 100 });
+  await expect(page.getByLabel("Zoom 100 percent")).toBeVisible();
+});
+
 test("creates triangle layers from the toolbar", async ({ page }) => {
   await page.goto("/");
 

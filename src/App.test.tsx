@@ -135,6 +135,19 @@ describe("App", () => {
     expect(screen.getByLabelText("X")).toHaveValue(136);
   });
 
+  it("zooms the canvas with the mouse wheel", () => {
+    render(<App />);
+
+    const canvas = screen.getByRole("img", { name: "Sample Logo" });
+    fireEvent.wheel(canvas, { deltaY: -100 });
+
+    expect(screen.getByLabelText("Zoom 110 percent")).toBeInTheDocument();
+
+    fireEvent.wheel(canvas, { deltaY: 100 });
+
+    expect(screen.getByLabelText("Zoom 100 percent")).toBeInTheDocument();
+  });
+
   it("applies masks through history so undo releases the target", async () => {
     const user = userEvent.setup();
     render(<App />);

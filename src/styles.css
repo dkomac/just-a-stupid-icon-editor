@@ -293,6 +293,7 @@ select:focus-visible {
   display: grid;
   place-items: center;
   transform-origin: center;
+  transform: scale(var(--canvas-zoom, 1));
   transition: transform 160ms ease;
 }
 
