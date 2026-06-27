@@ -48,6 +48,42 @@ describe("editor panels", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ layers: [], selectedLayerIds: [] }));
   });
 
+  it("merges a layer with the layer below from the layers panel", async () => {
+    const first = addLayer(createDocument(), {
+      type: "rect",
+      name: "Base",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      fill: "#2ec4b6",
+      stroke: "#2ec4b6",
+      strokeWidth: 0,
+      cornerRadius: 0,
+    });
+    const doc = addLayer(first, {
+      type: "ellipse",
+      name: "Orb",
+      x: 20,
+      y: 20,
+      width: 80,
+      height: 80,
+      fill: "#2ec4b6",
+      stroke: "#2ec4b6",
+      strokeWidth: 0,
+    });
+    const onChange = vi.fn();
+
+    render(<LayersPanel document={doc} selectedLayerIds={[doc.layers[1].id]} onSelectLayer={vi.fn()} onChangeDocument={onChange} />);
+    await userEvent.click(screen.getByRole("button", { name: "Merge Orb with layer below" }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        layers: [expect.objectContaining({ name: "Orb + Base", type: "path" })],
+      }),
+    );
+  });
+
   it("disables clear all layers when the document is empty", () => {
     render(<LayersPanel document={createDocument()} selectedLayerIds={[]} onSelectLayer={vi.fn()} onChangeDocument={vi.fn()} />);
 

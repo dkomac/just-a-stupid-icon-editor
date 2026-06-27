@@ -4,9 +4,11 @@ import {
   alignLayers,
   applyMask,
   clearLayers,
+  canMergeLayerDown,
   createDocument,
   deleteLayer,
   duplicateLayer,
+  mergeLayerDown,
   moveLayer,
   releaseMask,
   snapValue,
@@ -69,6 +71,71 @@ describe("document model", () => {
     expect(firstDuplicate.layers[1]).toMatchObject({ x: 8, y: 8 });
     expect(secondDuplicate.layers.map((layer) => layer.name)).toEqual(["Base", "Base - 3", "Base - 2", "Dot"]);
     expect(secondDuplicate.selectedLayerIds).toEqual([secondDuplicate.layers[1].id]);
+  });
+
+  it("merges a shape layer with the layer below it", () => {
+    const first = addLayer(createDocument(), {
+      type: "rect",
+      name: "Base",
+      x: 10,
+      y: 20,
+      width: 100,
+      height: 80,
+      fill: "#2ec4b6",
+      stroke: "#2ec4b6",
+      strokeWidth: 0,
+      cornerRadius: 0,
+    });
+    const doc = addLayer(first, {
+      type: "ellipse",
+      name: "Orb",
+      x: 80,
+      y: 60,
+      width: 60,
+      height: 60,
+      fill: "#2ec4b6",
+      stroke: "#2ec4b6",
+      strokeWidth: 0,
+    });
+
+    expect(canMergeLayerDown(doc, doc.layers[1].id)).toBe(true);
+
+    const merged = mergeLayerDown(doc, doc.layers[1].id);
+
+    expect(merged.layers).toHaveLength(1);
+    expect(merged.layers[0]).toMatchObject({
+      type: "path",
+      name: "Orb + Base",
+      x: 10,
+      y: 20,
+      width: 130,
+      height: 100,
+      fill: "#2ec4b6",
+      stroke: "#2ec4b6",
+      strokeWidth: 0,
+    });
+    expect(merged.layers[0]).toHaveProperty("path", expect.stringContaining("Z M"));
+    expect(merged.selectedLayerIds).toEqual([merged.layers[0].id]);
+  });
+
+  it("does not merge incompatible layers", () => {
+    const first = addLayer(createDocument(), { type: "rect", name: "Base", x: 0, y: 0, width: 100, height: 100, fill: "#111111" });
+    const doc = addLayer(first, {
+      type: "text",
+      name: "Wordmark",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 40,
+      text: "Logo",
+      fontFamily: "Inter",
+      fontSize: 24,
+      fontWeight: 800,
+      fill: "#111111",
+    });
+
+    expect(canMergeLayerDown(doc, doc.layers[1].id)).toBe(false);
+    expect(mergeLayerDown(doc, doc.layers[1].id)).toBe(doc);
   });
 
   it("clears every layer and selection", () => {

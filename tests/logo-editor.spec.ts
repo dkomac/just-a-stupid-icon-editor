@@ -115,6 +115,20 @@ test("creates triangle layers from the toolbar", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Inspector" }).getByText("path")).toBeVisible();
 });
 
+test("merges a compatible layer with the layer below", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Rectangle" }).click();
+  await page.getByRole("button", { name: "Ellipse" }).click();
+
+  const layers = page.getByRole("region", { name: "Layers" });
+  await layers.getByRole("button", { name: "Merge Ellipse with layer below" }).click();
+
+  await expect(layers.getByRole("article", { name: "Layer Ellipse + Rectangle" })).toBeVisible();
+  await expect(layers.getByRole("button", { name: "Select layer Ellipse + Rectangle" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("region", { name: "Inspector" }).getByText("path")).toBeVisible();
+});
+
 test("creates additional shapes and changes text fonts", async ({ page }) => {
   await page.goto("/");
 

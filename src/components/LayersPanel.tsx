@@ -1,9 +1,11 @@
-import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Lock, Trash2, Unlock } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Lock, Merge, Trash2, Unlock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   clearLayers,
+  canMergeLayerDown,
   deleteLayer,
   duplicateLayer,
+  mergeLayerDown,
   moveLayer,
   toggleLayerLocked,
   toggleLayerVisible,
@@ -194,6 +196,12 @@ export function LayersPanel({ document, selectedLayerIds, onSelectLayer, onChang
                     label={`Duplicate ${layer.name}`}
                     icon={<Copy size={15} />}
                     onClick={() => onChangeDocument(duplicateLayer(document, layer.id))}
+                  />
+                  <IconButton
+                    label={`Merge ${layer.name} with layer below`}
+                    icon={<Merge size={15} />}
+                    disabled={!canMergeLayerDown(document, layer.id)}
+                    onClick={() => onChangeDocument(mergeLayerDown(document, layer.id))}
                   />
                   <IconButton
                     label={`Move ${layer.name} up`}
