@@ -88,6 +88,17 @@ function centerOf(layer: LogoLayer): Point {
   };
 }
 
+function rotatePoint(point: Point, degrees: number): Point {
+  const radians = (degrees * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+
+  return {
+    x: point.x * cos - point.y * sin,
+    y: point.x * sin + point.y * cos,
+  };
+}
+
 function renderLayerShape(layer: LogoLayer, forClipPath = false) {
   const paint = forClipPath
     ? { fill: "black", stroke: "none", strokeWidth: 0 }
@@ -293,37 +304,54 @@ export function CanvasStage({
       return;
     }
 
-    const deltaX = point.x - state.startPoint.x;
-    const deltaY = point.y - state.startPoint.y;
+    const pointerDelta = rotatePoint(
+      {
+        x: point.x - state.startPoint.x,
+        y: point.y - state.startPoint.y,
+      },
+      -layer.rotation,
+    );
     const gridSize = state.startDocument.settings.gridSize;
-    let x = layer.x;
-    let y = layer.y;
+    const handleSignX = state.handle.includes("e") ? 1 : -1;
+    const handleSignY = state.handle.includes("s") ? 1 : -1;
     let width = layer.width;
     let height = layer.height;
 
     if (state.handle.includes("e")) {
-      width = Math.max(MIN_LAYER_SIZE, layer.width + deltaX);
+      width = Math.max(MIN_LAYER_SIZE, layer.width + pointerDelta.x);
     }
 
     if (state.handle.includes("s")) {
-      height = Math.max(MIN_LAYER_SIZE, layer.height + deltaY);
+      height = Math.max(MIN_LAYER_SIZE, layer.height + pointerDelta.y);
     }
 
     if (state.handle.includes("w")) {
-      width = Math.max(MIN_LAYER_SIZE, layer.width - deltaX);
-      x = layer.x + layer.width - width;
+      width = Math.max(MIN_LAYER_SIZE, layer.width - pointerDelta.x);
     }
 
     if (state.handle.includes("n")) {
-      height = Math.max(MIN_LAYER_SIZE, layer.height - deltaY);
-      y = layer.y + layer.height - height;
+      height = Math.max(MIN_LAYER_SIZE, layer.height - pointerDelta.y);
     }
+
+    width = snapSizeValue(width, gridSize, snapToGrid);
+    height = snapSizeValue(height, gridSize, snapToGrid);
+
+    const center = centerOf(layer);
+    const centerDelta = rotatePoint(
+      {
+        x: (handleSignX * (width - layer.width)) / 2,
+        y: (handleSignY * (height - layer.height)) / 2,
+      },
+      layer.rotation,
+    );
+    const x = center.x + centerDelta.x - width / 2;
+    const y = center.y + centerDelta.y - height / 2;
 
     const nextPatch = {
       x: snapGeometryValue(x, gridSize, snapToGrid),
       y: snapGeometryValue(y, gridSize, snapToGrid),
-      width: snapSizeValue(width, gridSize, snapToGrid),
-      height: snapSizeValue(height, gridSize, snapToGrid),
+      width,
+      height,
     };
 
     previewInteraction(

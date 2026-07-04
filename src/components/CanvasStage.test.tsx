@@ -114,6 +114,39 @@ describe("CanvasStage", () => {
     );
   });
 
+  it("resizes rotated layers along the handle's visual axes", () => {
+    const baseDoc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 20, y: 30, width: 120, height: 80, rotation: 90 });
+    const doc = {
+      ...baseDoc,
+      settings: {
+        ...baseDoc.settings,
+        gridSize: 1,
+      },
+    };
+    const onChangeDocument = vi.fn();
+
+    render(
+      <CanvasStage
+        document={doc}
+        selectedLayerIds={[doc.layers[0].id]}
+        showGrid
+        snapToGrid={false}
+        onSelectLayer={vi.fn()}
+        onChangeDocument={onChangeDocument}
+      />,
+    );
+    dispatchPointerEvent(screen.getByRole("button", { name: "Resize se" }), "pointerdown", { clientX: 40, clientY: 130 });
+    dispatchPointerEvent(window, "pointermove", { clientX: 40, clientY: 146 });
+    dispatchPointerEvent(window, "pointerup", {});
+
+    expect(onChangeDocument).toHaveBeenCalledTimes(1);
+    expect(onChangeDocument).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        layers: [expect.objectContaining({ id: doc.layers[0].id, x: 12, y: 38, width: 136, height: 80 })],
+      }),
+    );
+  });
+
   it("resizes selected layers with keyboard-operated handles", () => {
     const doc = addLayer(createDocument(), { type: "rect", name: "Badge", x: 20, y: 30, width: 120, height: 80 });
     const onChangeDocument = vi.fn();
